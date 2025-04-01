@@ -92,11 +92,9 @@ print(result)
 
 Monitor your work in the Dask Dashboard.
 
-
 ![alt text](../img/dask-dashboard-1.png)
 
-![alt text](../../img/dask-dashboard-2.png)
-
+![alt text](../img/dask-dashboard-2.png)
 
 ### Recommendations
 
@@ -109,6 +107,7 @@ Monitor your work in the Dask Dashboard.
 * The source code for the cmlextensions package can be found on [github](https://github.com/cloudera/cmlextensions). For customizations, you're welcome to fork or directly load the source code in your environment.
 
 * If you have any issues reaching the Dask Dashboard, you can try running this code and reaching the site provided in the output: ```print("https://"+os.environ["CDSW_ENGINE_ID"]+"."+os.environ["CDSW_DOMAIN"])```
+
 
 ## Summary and Next Steps
 
