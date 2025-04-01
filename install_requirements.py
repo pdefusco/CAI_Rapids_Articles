@@ -11,3 +11,5 @@
     cugraph-cu12==24.6.*
 
 !pip install gpustat
+
+#!pip install graphviz
