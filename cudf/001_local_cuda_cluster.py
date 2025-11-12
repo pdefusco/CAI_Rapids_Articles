@@ -45,6 +45,9 @@ cluster = LocalCUDACluster()
 client = Client(cluster)
 client
 
+import os
+print('https://{}.{}'.format(os.environ['CDSW_ENGINE_ID'], os.environ['CDSW_DOMAIN']))
+
 import cudf; print('cuDF Version:', cudf.__version__)
 import numpy as np; print('NumPy Version:', np.__version__)
 
@@ -61,13 +64,12 @@ def head(dataframe):
     return dataframe.head()
 
 # define the number of workers
-n_workers = 1  # feel free to change this depending on how many GPUs you have
+n_workers = 2  # feel free to change this depending on how many GPUs you have
 
 # define the number of rows each dataframe will have
 n_rows = 125000000  # we'll use 125 million rows in each dataframe
 
 from dask.delayed import delayed
-
 
 # create each dataframe using a delayed operation
 dfs = [delayed(load_data)(n_rows) for i in range(n_workers)]
@@ -99,7 +101,7 @@ lengths
 
 total_number_of_rows = delayed(sum)(lengths)
 
-total_number_of_rows.visualize()
+#total_number_of_rows.visualize()
 
 # use the client to compute the result and wait for it to finish
 future = client.compute(total_number_of_rows)
