@@ -41,24 +41,19 @@ import os, warnings, sys, logging
 import mlflow
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import accuracy_score, recall_score
-import mlflow.sklearn
-from xgboost import XGBClassifier
 from datetime import date
-import cml.data_v1 as cmldata
-import pyspark.pandas as ps
+from pyspark.ml.feature import VectorAssembler
+from spark_rapids_ml.classification import RandomForestClassifier
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+from pyspark.sql import SparkSession
 
 
 USERNAME = os.environ["PROJECT_OWNER"]
-DBNAME = os.environ["DBNAME_PREFIX"]+"_"+USERNAME
-CONNECTION_NAME = os.environ["SPARK_CONNECTION_NAME"]
+DBNAME = "DEMO_"+USERNAME
+CONNECTION_NAME = "pdf-oct-aw-dl"
+STORAGE = "s3a://pdf-oct-buk-a163bf71/data/"
 DATE = date.today()
-
-import os
 os.environ["PYSPARK_SUBMIT_ARGS"] = "--jars /home/cdsw/rapids-4-spark_2.12-25.08.0.jar pyspark-shell"
-
-from pyspark.sql import SparkSession
 
 spark = SparkSession\
   .builder\
@@ -78,30 +73,14 @@ spark = SparkSession\
   .config("spark.eventLog.enabled","true") \
   .getOrCreate()
 
-df = spark.read("SELECT * FROM SPARK_CATALOG.{1}.{2};".format(DBNAME, USERNAME))
+df = spark.read(STORAGE+"spark-rapids-ml-demo/"+USERNAME)
 df.show()
-
-
-                    .withColumn("age", "float", minValue=10, maxValue=100, random=True)
-                    .withColumn("credit_card_balance", "float", minValue=100, maxValue=30000, random=True)
-                    .withColumn("bank_account_balance", "float", minValue=0.01, maxValue=100000, random=True)
-                    .withColumn("mortgage_balance", "float", minValue=0.01, maxValue=1000000, random=True)
-                    .withColumn("sec_bank_account_balance", "float", minValue=0.01, maxValue=100000, random=True)
-                    .withColumn("savings_account_balance", "float", minValue=0.01, maxValue=500000, random=True)
-                    .withColumn("sec_savings_account_balance", "float", minValue=0.01, maxValue=500000, random=True)
-                    .withColumn("total_est_nworth", "float", minValue=10000, maxValue=500000, random=True)
-                    .withColumn("primary_loan_balance", "float", minValue=0.01, maxValue=5000, random=True)
-                    .withColumn("secondary_loan_balance", "float", minValue=0.01, maxValue=500000, random=True)
-                    .withColumn("uni_loan_balance", "float", minValue=0.01, maxValue=10000, random=True)
-                    .withColumn("longitude", "float", minValue=-180, maxValue=180, random=True)
-                    .withColumn("latitude", "float", minValue=-90, maxValue=90, random=True)
-                    .withColumn("transaction_amount", "float", minValue=0.01, maxValue=30000, random=True)
-                    .withColumn("fraud_trx", "string", values=["0", "1"], weights=[9, 1], random=True)
 
 # 2. Transform data into a single vector column (required by Spark ML API)
 feature_cols = ["age", "credit_card_balance", "bank_account_balance", "mortgage_balance", "sec_bank_account_balance", "savings_account_balance",
                     "sec_savings_account_balance", "total_est_nworth", "primary_loan_balance", "secondary_loan_balance", "uni_loan_balance",
                     "longitude", "latitude", "transaction_amount"]
+
 assembler = VectorAssembler(inputCols=feature_cols, outputCol="features")
 df_assembled = assembler.transform(df)
 
@@ -135,6 +114,8 @@ import onnx
 N = 14  # number of features in your Spark feature vector
 initial_types = [("features", FloatTensorType([None, N]))]
 
+#model_signature = infer_signature(X_train, y_pred)
+
 # Convert to ONNX
 onnx_model = onnxmltools.convert_sparkml(
     spark_model,
@@ -143,7 +124,10 @@ onnx_model = onnxmltools.convert_sparkml(
     target_opset=None  # you can specify a target ONNX opset version if desired
 )
 
-# Save model to file
-onnxmltools.utils.save_model(onnx_model, "spark_model.onnx")
+# Save model to Registry
+#onnxmltools.utils.save_model(onnx_model, "fraud_classifier.onnx")
+mlflow.onnx.log_model(onnx_model, "fraud-clf-onnx-spark-rapids-ml",
+                      registered_model_name="fraud-clf-onnx-spark-rapids-ml"
+                     )
 
-print("ONNX opset version:", onnx_model.opset_import[0].version)
+#signature=model_signature)

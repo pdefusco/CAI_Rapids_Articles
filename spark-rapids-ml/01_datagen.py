@@ -54,10 +54,11 @@ class BankDataGen:
 
     '''Class to Generate Banking Data'''
 
-    def __init__(self, username, dbname, connectionName):
+    def __init__(self, username, dbname, connectionName, storage):
         self.username = username
         self.dbname = dbname
         self.connectionName = connectionName
+        self.storage = storage
 
 
     def dataGen(self, spark, shuffle_partitions_requested = 5, partitions_requested = 2, data_rows = 10000):
@@ -114,8 +115,7 @@ class BankDataGen:
         """
         Method to save credit card transactions df as csv in cloud storage
         """
-        #df.write.format("csv").mode('overwrite').save(self.storage + "/bank_fraud_demo/" + self.username)
-        pass
+        df.write.format("csv").mode('overwrite').save(self.storage + "spark-rapids-ml-demo/" + self.username)
 
 
     def createDatabase(self, spark):
@@ -156,11 +156,12 @@ class BankDataGen:
 def main():
 
     USERNAME = os.environ["PROJECT_OWNER"]
-    DBNAME = "BNK_MLOPS_HOL_"+USERNAME
-    CONNECTION_NAME = os.environ["SPARK_CONNECTION_NAME"]
+    DBNAME = "DEMO_"+USERNAME
+    CONNECTION_NAME = "pdf-oct-aw-dl"
+    STORAGE = "s3a://pdf-oct-buk-a163bf71/data/"
 
     # Instantiate BankDataGen class
-    dg = BankDataGen(USERNAME, DBNAME, CONNECTION_NAME)
+    dg = BankDataGen(USERNAME, DBNAME, CONNECTION_NAME, STORAGE)
 
     # Create CML Spark Connection
     spark = dg.createSparkConnection()
@@ -169,14 +170,16 @@ def main():
     df = dg.dataGen(spark)
 
     # Create Spark Database
-    dg.createDatabase(spark)
+    #dg.createDatabase(spark)
 
     # Create Iceberg Table in Database
-    dg.createOrReplace(df)
+    #dg.createOrReplace(df)
 
     # Validate Iceberg Table in Database
-    dg.validateTable(spark)
+    #dg.validateTable(spark)
 
+    # Write Data to S3
+    dg.saveFileToCloud(df)
 
 if __name__ == '__main__':
     main()
