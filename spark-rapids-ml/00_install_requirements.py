@@ -44,6 +44,8 @@
   "cucim-cu12==25.8.*" "pylibraft-cu12==25.8.*" "raft-dask-cu12==25.8.*" \
   "cuvs-cu12==25.8.*" "nx-cugraph-cu12==25.8.*"
 
+!pip install -r spark-rapids-ml/requirements.txt
+
 !wget https://raw.githubusercontent.com/apache/spark/refs/heads/master/examples/src/main/scripts/getGpusResources.sh
 !chmod +x getGpusResources.sh
 !wget https://edge.urm.nvidia.com/artifactory/sw-spark-maven/com/nvidia/rapids-4-spark_2.12/25.08.0/rapids-4-spark_2.12-25.08.0.jar
