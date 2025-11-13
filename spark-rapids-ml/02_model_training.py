@@ -59,7 +59,7 @@ spark = SparkSession\
   .builder\
   .appName("Spark-Rapids-Ml")\
   .config('spark.dynamicAllocation.enabled', 'false')\
-  .config('spark.executor.cores', 1)\
+  .config('spark.executor.cores', 2)\
   .config('spark.executor.resource.gpu.amount', 1)\
   .config('spark.executor.instances', 2)\
   .config('spark.executor.memory', '16g')\
@@ -68,12 +68,14 @@ spark = SparkSession\
   .config("spark.jars.packages", "com.nvidia:rapids-4-spark_2.12:25.08.0")\
   .config("spark.executor.resource.gpu.discoveryScript","/home/cdsw/getGpusResources.sh")\
   .config("spark.executor.resource.gpu.vendor", "nvidia.com")\
-  .config("spark.rapids.shims-provider-override", "com.nvidia.spark.rapids.shims.spark332.SparkShimServiceProvider")\
+  .config("spark.rapids.shims-provider-override", "com.nvidia.spark.rapids.shims.spark351.SparkShimServiceProvider")\
   .config("spark.driver.memory","10g") \
   .config("spark.eventLog.enabled","true") \
+  .config("spark.rapids.sql.concurrentGpuTasks", "2") \
+  .config("spark.dynamicAllocation.enabled", "false") \
   .getOrCreate()
 
-df = spark.read(STORAGE+"spark-rapids-ml-demo/"+USERNAME)
+df = spark.read.csv(STORAGE+"spark-rapids-ml-demo/"+USERNAME, header=True, inferSchema=True)
 df.show()
 
 # 2. Transform data into a single vector column (required by Spark ML API)

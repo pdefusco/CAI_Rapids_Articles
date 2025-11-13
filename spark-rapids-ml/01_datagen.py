@@ -124,7 +124,6 @@ class BankDataGen:
         """
 
         spark.sql("CREATE DATABASE IF NOT EXISTS {}".format(self.dbname))
-
         print("SHOW DATABASES LIKE '{}'".format(self.dbname))
         spark.sql("SHOW DATABASES LIKE '{}'".format(self.dbname)).show()
 
