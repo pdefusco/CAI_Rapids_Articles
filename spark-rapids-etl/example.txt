@@ -1,0 +1,16 @@
+This is the first line of text.
+Here's another line with some words.
+And a third line for good measure.
+The quick brown fox jumps over the lazy dog.
+Spark and Rapids make GPU ETL faster.
+Python is a versatile language for data science.
+Data processing can be fun and informative.
+Machine learning requires clean and structured data.
+Sometimes random text is all you need for testing.
+GPU acceleration can speed up large transformations.
+Small datasets are good for initial experiments.
+This line contains numbers 123 and symbols #$%.
+Another example of a textual line to process.
+Text analysis often involves tokenization and counting.
+We can generate as many lines as needed for testing.
+The final line to round out our small dataset.
