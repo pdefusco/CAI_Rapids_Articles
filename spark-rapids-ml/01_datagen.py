@@ -115,7 +115,7 @@ class BankDataGen:
         """
         Method to save credit card transactions df as csv in cloud storage
         """
-        df.write.format("csv").mode('overwrite').save(self.storage + "spark-rapids-ml-demo/" + self.username)
+        df.write.format("csv").mode('overwrite').option("header", "true").save(self.storage + "spark-rapids-ml-demo/" + self.username)
 
 
     def createDatabase(self, spark):
@@ -124,6 +124,7 @@ class BankDataGen:
         """
 
         spark.sql("CREATE DATABASE IF NOT EXISTS {}".format(self.dbname))
+
         print("SHOW DATABASES LIKE '{}'".format(self.dbname))
         spark.sql("SHOW DATABASES LIKE '{}'".format(self.dbname)).show()
 
@@ -144,10 +145,21 @@ class BankDataGen:
                 .using("iceberg").tableProperty("write.format.default", "parquet").createOrReplace()
 
 
+    def createHiveTable(self, df, hive_table_name):
+        """
+        Method to create or append data to the BANKING TRANSACTIONS table
+        The table is used to simulate batches of new data
+        The table is meant to be updated periodically as part of a CML Job
+        """
+
+        df.write.mode("overwrite").saveAsTable(hive_table_name)
+
+
     def validateTable(self, spark):
         """
         Method to validate creation of table
         """
+
         print("SHOW TABLES FROM '{}'".format(self.dbname))
         spark.sql("SHOW TABLES FROM {}".format(self.dbname)).show()
 
@@ -178,7 +190,11 @@ def main():
     #dg.validateTable(spark)
 
     # Write Data to S3
-    dg.saveFileToCloud(df)
+    #dg.saveFileToCloud(df)
+
+    # Save as Hive Table
+    dg.createHiveTable(df, "DataLakeTable")
+
 
 if __name__ == '__main__':
     main()
