@@ -1,6 +1,6 @@
 # Spark Rapids ETL in Cloudera AI
 
-![alt text](../img/xgboost-deployment.png)
+![alt text](../img/spark-rapids-arch.png)
 
 ## Objective
 
