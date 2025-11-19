@@ -49,9 +49,65 @@ You can ignore the warning about Spark and GPU compatibility.
 
 #### 3. Run Spark Rapids Script
 
-Once the Session becomes available, run the entire script. No code modifications are required.
+Once the Session becomes available, you can run the entire script in one go. No code modifications are required.
 
 Notice the ETL transformations end with an ```.explain()``` method call. Look at the output to confirm the Spark Physical Plan is leveraging GPU acceleration.
+
+About the code, notice the SparkSession object is instantiated with the following Spark options.
+
+```
+import os, warnings, sys, logging
+from pyspark.sql import SparkSession
+
+spark = SparkSession\
+  .builder\
+  .appName("Spark-Rapids-Ml")\
+  .config('spark.dynamicAllocation.enabled', 'false')\
+  .config('spark.executor.cores', 1)\
+  .config('spark.executor.resource.gpu.amount', 1)\
+  .config('spark.executor.instances', 1)\
+  .config('spark.executor.memory', '16g')\
+  .config('spark.rapids.memory.pinnedPool.size', '2G')\
+  .config('spark.plugins', 'com.nvidia.spark.SQLPlugin')\
+  .config("spark.jars.packages", "com.nvidia:rapids-4-spark_2.12:25.08.0")\
+  .config("spark.executor.resource.gpu.discoveryScript","/home/cdsw/getGpusResources.sh")\
+  .config("spark.executor.resource.gpu.vendor", "nvidia.com")\
+  .config("spark.rapids.shims-provider-override", "com.nvidia.spark.rapids.shims.spark330.SparkShimServiceProvider")\
+  .config("spark.driver.memory","10g") \
+  .config("spark.eventLog.enabled","true") \
+  .config("spark.rapids.sql.concurrentGpuTasks", "2") \
+  .config("spark.sql.files.maxPartitionBytes", "256m") \
+  .config("spark.locality.wait", "0") \
+  .config("spark.sql.adaptive.enabled", "true") \
+  .config("spark.rapids.memory.pinnedPool.size", "2g") \
+  .config("spark.sql.adaptive.advisoryPartitionSizeInBytes", "1g") \
+  .config("spark.executor.memoryOverhead", "3g") \
+  .config("spark.kryo.registrator", "com.nvidia.spark.rapids.GpuKryoRegistrator") \
+  .getOrCreate()
+
+:: loading settings :: url = jar:file:/runtime-addons/spark330-24.1-h1-zd1ok/opt/spark/jars/ivy-2.5.1.jar!/org/apache/ivy/core/settings/ivysettings.xml
+Ivy Default Cache set to: /home/cdsw/.ivy2/cache
+The jars for the packages stored in: /home/cdsw/.ivy2/jars
+com.nvidia#rapids-4-spark_2.12 added as a dependency
+:: resolving dependencies :: org.apache.spark#spark-submit-parent-f894b50f-faaa-42fd-b7fd-7465bdf4820e;1.0
+	confs: [default]
+	found com.nvidia#rapids-4-spark_2.12;25.08.0 in central
+:: resolution report :: resolve 235ms :: artifacts dl 16ms
+	:: modules in use:
+	com.nvidia#rapids-4-spark_2.12;25.08.0 from central in [default]
+	---------------------------------------------------------------------
+	|                  |            modules            ||   artifacts   |
+	|       conf       | number| search|dwnlded|evicted|| number|dwnlded|
+	---------------------------------------------------------------------
+	|      default     |   1   |   0   |   0   |   0   ||   1   |   0   |
+	---------------------------------------------------------------------
+:: retrieving :: org.apache.spark#spark-submit-parent-f894b50f-faaa-42fd-b7fd-7465bdf4820e
+	confs: [default]
+	0 artifacts copied, 1 already retrieved (0kB/20ms)
+Setting spark.hadoop.yarn.resourcemanager.principal to pauldefusco
+```
+
+Next, a simple txt file is read and the ETL logic is executed.
 
 ```
 from pyspark.sql import functions as F
