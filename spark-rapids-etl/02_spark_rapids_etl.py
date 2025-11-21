@@ -38,13 +38,9 @@
 #***************************************************************************/
 
 import os, warnings, sys, logging
-import mlflow
 import pandas as pd
 import numpy as np
 from datetime import date
-from pyspark.ml.feature import VectorAssembler
-from spark_rapids_ml.classification import RandomForestClassifier
-from pyspark.ml.evaluation import MulticlassClassificationEvaluator
 from pyspark.sql import SparkSession
 
 spark = SparkSession\
@@ -71,12 +67,30 @@ spark = SparkSession\
   .config("spark.sql.adaptive.advisoryPartitionSizeInBytes", "1g") \
   .config("spark.executor.memoryOverhead", "3g") \
   .config("spark.kryo.registrator", "com.nvidia.spark.rapids.GpuKryoRegistrator") \
+  .config("spark.rapids.sql.enabled", "true") \
+  .config("spark.rapids.sql.incompatibleOps.enabled", "true") \
+  .config("spark.rapids.sql.udfCompiler.enabled", "true") \
+  .config("spark.rapids.sql.format.csv.read.enabled", "true") \
+  .config("spark.rapids.sql.format.csv.enabled", "true") \
+  .config("spark.rapids.sql.variableFloatAgg.enabled", "true") \
+  .config("spark.rapids.sql.explain", "ALL") \
+  .config("spark.sql.hive.convertMetastoreParquet", "true") \
+  .config("spark.rapids.sql.castFloatToString.enabled", "true") \
+  .config("spark.rapids.sql.csv.read.float.enabled", "true") \
+  .config("spark.rapids.sql.castStringToFloat.enabled", "true") \
+  .config("spark.hadoop.fs.s3a.custom.signers", "RazS3SignerPlugin:org.apache.ranger.raz.hook.s3.RazS3SignerPlugin:org.apache.ranger.raz.hook.s3.RazS3SignerPluginInitializer") \
+  .config("spark.hadoop.fs.s3a.s3.signing-algorithm", "RazS3SignerPlugin") \
+  .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.ranger.raz.hook.s3.RazCredentialProvider") \
+  .config("spark.kubernetes.executor.podTemplateFile", "/tmp/spark-executor.json") \
+  .config("spark.kerberos.access.hadoopFileSystems", "s3a://pdf-oct-buk-a163bf71/data/") \
   .getOrCreate()
 
-#read_df = spark.read.table("DataLakeTable")
-#read_df.show()
-from pyspark.sql import functions as F
+# Read from Data Lake Table
+read_df = spark.read.table("DataLakeTable")
+read_df.show()
 
+# Read from Local Project File
+from pyspark.sql import functions as F
 # Define the path to your text file
 file_path = "/home/cdsw/spark-rapids-ml/example.txt"  # Adjust if your file is in a different location
 

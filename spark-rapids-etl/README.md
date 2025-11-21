@@ -47,17 +47,24 @@ You can ignore the warning about Spark and GPU compatibility.
 
 ![alt text](../img/spark-rapids-session-params.png)
 
-#### 3. Run Spark Rapids Script
+#### 3. Install Requirements
 
-Once the Session becomes available, you can run the entire script in one go. No code modifications are required.
+Run script ```00_install_requirements.py``` to install dependencies for this project.
 
-Notice the ETL transformations end with an ```.explain()``` method call. Look at the output to confirm the Spark Physical Plan is leveraging GPU acceleration.
+#### 4. Create Synthetic Data
+
+Run script ```01_datagen.py``` to create the synthetic data.
+
+#### 5. Run Spark Rapids ETL Script
+
+Run script ```02_spark_rapids_etl.py```. Notice the script ends with an ```.explain()``` method call. Look at the output to confirm the Spark Physical Plan is leveraging GPU acceleration.
 
 About the code, notice the SparkSession object is instantiated with the following Spark options.
 
 ```
 import os, warnings, sys, logging
 from pyspark.sql import SparkSession
+
 
 spark = SparkSession\
   .builder\
@@ -83,6 +90,22 @@ spark = SparkSession\
   .config("spark.sql.adaptive.advisoryPartitionSizeInBytes", "1g") \
   .config("spark.executor.memoryOverhead", "3g") \
   .config("spark.kryo.registrator", "com.nvidia.spark.rapids.GpuKryoRegistrator") \
+  .config("spark.rapids.sql.enabled", "true") \
+  .config("spark.rapids.sql.incompatibleOps.enabled", "true") \
+  .config("spark.rapids.sql.udfCompiler.enabled", "true") \
+  .config("spark.rapids.sql.format.csv.read.enabled", "true") \
+  .config("spark.rapids.sql.format.csv.enabled", "true") \
+  .config("spark.rapids.sql.variableFloatAgg.enabled", "true") \
+  .config("spark.rapids.sql.explain", "ALL") \
+  .config("spark.sql.hive.convertMetastoreParquet", "true") \
+  .config("spark.rapids.sql.castFloatToString.enabled", "true") \
+  .config("spark.rapids.sql.csv.read.float.enabled", "true") \
+  .config("spark.rapids.sql.castStringToFloat.enabled", "true") \
+  .config("spark.hadoop.fs.s3a.custom.signers", "RazS3SignerPlugin:org.apache.ranger.raz.hook.s3.RazS3SignerPlugin:org.apache.ranger.raz.hook.s3.RazS3SignerPluginInitializer") \
+  .config("spark.hadoop.fs.s3a.s3.signing-algorithm", "RazS3SignerPlugin") \
+  .config("spark.hadoop.fs.s3a.aws.credentials.provider", "org.apache.ranger.raz.hook.s3.RazCredentialProvider") \
+  .config("spark.kubernetes.executor.podTemplateFile", "/tmp/spark-executor.json") \
+  .config("spark.kerberos.access.hadoopFileSystems", "s3a://pdf-oct-buk-a163bf71/data/") \
   .getOrCreate()
 
 :: loading settings :: url = jar:file:/runtime-addons/spark330-24.1-h1-zd1ok/opt/spark/jars/ivy-2.5.1.jar!/org/apache/ivy/core/settings/ivysettings.xml
@@ -107,7 +130,27 @@ com.nvidia#rapids-4-spark_2.12 added as a dependency
 Setting spark.hadoop.yarn.resourcemanager.principal to pauldefusco
 ```
 
-Next, a simple txt file is read and the ETL logic is executed.
+You can read data from a Hive table. Next, read the data you generated in script 01_datagen.py:
+
+```
+read_df = spark.read.table("DataLakeTable")
+Hive Session ID = 6b5f7e49-e326-449e-8066-dd9906353c7c
+read_df.show()
+[Stage 0:>                                                          (0 + 1) / 1]
++----+-------------------+--------------------+----------------+------------------------+-----------------------+---------------------------+----------------+--------------------+----------------------+----------------+---------+--------+------------------+---------+
+| age|credit_card_balance|bank_account_balance|mortgage_balance|sec_bank_account_balance|savings_account_balance|sec_savings_account_balance|total_est_nworth|primary_loan_balance|secondary_loan_balance|uni_loan_balance|longitude|latitude|transaction_amount|fraud_trx|
++----+-------------------+--------------------+----------------+------------------------+-----------------------+---------------------------+----------------+--------------------+----------------------+----------------+---------+--------+------------------+---------+
+|75.0|            21305.0|            16840.01|        28308.01|                51828.01|               355457.0|                   308440.0|        474441.0|              422.01|              31642.01|         3399.01|    -15.0|    52.0|           7717.01|        0|
+|87.0|             4287.0|            15265.01|        596398.0|                21743.01|               402794.0|                   321811.0|        316707.0|             3748.01|              367266.0|         1615.01|     18.0|    72.0|           6343.01|        1|
+|90.0|            15322.0|              137.01|        858722.0|                22198.01|               298947.0|                   363054.0|        247698.0|             1551.01|              418030.0|         3660.01|      1.0|    10.0|           9962.01|        0|
+|62.0|             8093.0|             6776.01|        919655.0|                55062.01|               370276.0|                   70806.01|        132810.0|             4534.01|              337194.0|         5500.01|    125.0|    15.0|            243.01|        0|
+|22.0|             6363.0|            59697.01|        594999.0|                44478.01|              184480.02|                   282373.0|        361227.0|             3380.01|               2801.01|         8737.01|    117.0|     3.0|          26336.01|        0|
+|43.0|            25271.0|             5040.01|        618823.0|                14344.01|               44727.01|                   437211.0|         88774.0|             2247.01|             146704.02|         1717.01|    -69.0|    36.0|          10726.01|        0|
+|79.0|             6824.0|            78162.01|        391480.0|                 7645.01|               427205.0|                   443750.0|        224006.0|             4443.01|             153462.02|         4079.01|     71.0|   -15.0|           3906.01|        0|
+|90.0|             1032.0|            29912.01|        361694.0|                40073.01|               324143.0|                   492604.0|        491594.0|             1452.01|              386708.0|         9567.01|     19.0|   -49.0|          17622.01|        0|
+```
+
+You can also read data from local project files. Next, read a simple txt file and execute the ETL logic with GPU acceleration.
 
 ```
 from pyspark.sql import functions as F
@@ -223,7 +266,7 @@ GpuColumnarToRow false
          +- FileScan text [value#226] Batched: false, DataFilters: [isnotnull(value#226), RLIKE(value#226, (?i)line), NOT Contains(value#226, apache), (size(split(v..., Format: Text, Location: InMemoryFileIndex(1 paths)[file:/home/cdsw/spark-rapids-ml/example.txt], PartitionFilters: [], PushedFilters: [IsNotNull(value), Not(StringContains(value,apache))], ReadSchema: struct<value:string>
 ```
 
-#### 4. Validate GPU utilization in the Spark UI
+#### 6. Validate GPU utilization in the Spark UI
 
 You can also explore the Spark UI and validate GPU utilization from there.
 
