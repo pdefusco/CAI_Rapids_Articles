@@ -19,6 +19,7 @@ You can reproduce this tutorial in your CAI environment with the following:
 * A CAI Environment in Private or Public Cloud.
 * A PBJ or Python based IDE Runtime and the Spark 3.3.0 DEX CDE 1.24 Hotfix 1 Spark Add On.
 * A Spark Rapids compatible GPU such as V100, T4, A10, A100, L4, H100, and B100.
+* Ranger RAZ and Hadoop SQL policy permissions and IDBroker Mapping configurations for your CDP User.  
 
 ## Step by Step Instructions
 
@@ -53,18 +54,29 @@ Run script ```00_install_requirements.py``` to install dependencies for this pro
 
 #### 4. Create Synthetic Data
 
-Run script ```01_datagen.py``` to create the synthetic data.
+Open script ```01_datagen.py``` and modify lines 171 and 172 with the Spark Data Connection and Storage Location reflecting your CDP Environment.
+
+You can find the Spark Data Connection name if you click on the "Data" icon within a session.
+You can find the Storage Location variable from the Management Console (ask your CDP Admin if you're having trouble finding it). Make sure you are using the "data" folder.
+
+```
+CONNECTION_NAME = "pdf-oct-aw-dl"
+STORAGE = "s3a://pdf-oct-buk-a163bf71/data/"
+```
+
+Run the script in order to create the synthetic data.
 
 #### 5. Run Spark Rapids ETL Script
 
-Run script ```02_spark_rapids_etl.py```. Notice the script ends with an ```.explain()``` method call. Look at the output to confirm the Spark Physical Plan is leveraging GPU acceleration.
+Open script ```02_spark_rapids_etl.py```. At line 85 replace ```s3a://pdf-oct-buk-a163bf71/data/``` with the same value you used for the STORAGE variable in the previous script. This will authenticate the SparkSession with the DataLake. No other code changes are required.
+
+Notice the script ends with an ```.explain()``` method call. Look at the output to confirm the Spark Physical Plan is leveraging GPU acceleration.
 
 About the code, notice the SparkSession object is instantiated with the following Spark options.
 
 ```
 import os, warnings, sys, logging
 from pyspark.sql import SparkSession
-
 
 spark = SparkSession\
   .builder\
