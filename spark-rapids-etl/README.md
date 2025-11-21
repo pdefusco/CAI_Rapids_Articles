@@ -291,7 +291,7 @@ You can also explore the Spark UI and validate GPU utilization from there.
 This table outlines the purpose of the Spark Options used to accelerate the application with Spark Rapids.
 
 ```
-| **Config**                                                                                                                                                          | **What it does / Why it's used**                                                                                                                                                                                                                                                                                   |
+| **Config**                                                                                                                                                          | **Purpose**                                                                                                                                                                                                                                                                                   |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | `spark.dynamicAllocation.enabled = false`                                                                                                                           | Turns off Spark’s dynamic allocation, meaning the number of executors is fixed rather than scaling up/down. In Cloudera, dynamic allocation is on by default, so disabling it gives you control over executor count. ([Cloudera Documentation][1])                                                                 |
 | `spark.executor.cores = 1`                                                                                                                                          | Each executor gets 1 CPU core. This limits parallelism within each executor to one task at a time. ([archive.apache.org][2])                                                                                                                                                                                       |
@@ -331,14 +331,6 @@ This table outlines the purpose of the Spark Options used to accelerate the appl
 | `spark.kubernetes.executor.podTemplateFile = /tmp/spark-executor.json`                                                                                              | (If you're on Kubernetes) provides a pod template file for executor pods; this lets you define the pod spec (labels, resource requests, tolerations, etc.) via a JSON.                                                                                                                                             |
 | `spark.kerberos.access.hadoopFileSystems = s3a://pdf-oct-buk-a163bf71/data/`                                                                                        | Lists the Hadoop filesystems (S3A in this case) for which Spark should obtain Kerberos delegation tokens, so it can securely access them. According to Spark security docs: Spark will get tokens for each filesystem listed. ([Apache Spark][7])                                                                  |
 ```
-
-[1]: https://docs.cloudera.com/runtime/latest/running-spark-applications/topics/spark-yarn-dynamic-allocation.html?utm_source=chatgpt.com "Dynamic allocation"
-[2]: https://archive.apache.org/dist/spark/docs/2.2.1/configuration.html?utm_source=chatgpt.com "Configuration - Spark 2.2.1 Documentation"
-[3]: https://docs.nvidia.com/spark-rapids/user-guide/25.02/tuning-guide.html?utm_source=chatgpt.com "Tuning Guide — Spark RAPIDS User Guide"
-[4]: https://docs.nvidia.com/spark-rapids/user-guide/24.06/tuning-guide.html?utm_source=chatgpt.com "Tuning Guide — Spark RAPIDS User Guide"
-[5]: https://docs.cloudera.com/cdp-private-cloud-base/7.1.8/cds-3/spark-cds-3.pdf?utm_source=chatgpt.com "Cloudera Runtime 7.1.8"
-[6]: https://nvidia.github.io/spark-rapids/docs/additional-functionality/advanced_configs.html?utm_source=chatgpt.com "Advanced Configuration | spark-rapids"
-[7]: https://spark.apache.org/docs/latest/security.html?utm_source=chatgpt.com "Security - Spark 4.0.1 Documentation" 
 
 ## Summary & Next Steps
 
