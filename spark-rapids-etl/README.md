@@ -330,6 +330,7 @@ This table outlines the purpose of the Spark Options used to accelerate the appl
 | `spark.hadoop.fs.s3a.aws.credentials.provider = org.apache.ranger.raz.hook.s3.RazCredentialProvider`                                                                | Specifies which credentials provider to use for S3 access: here it's using Ranger RAZ's credential provider.                                                                                                                                                                                                       |
 | `spark.kubernetes.executor.podTemplateFile = /tmp/spark-executor.json`                                                                                              | (If you're on Kubernetes) provides a pod template file for executor pods; this lets you define the pod spec (labels, resource requests, tolerations, etc.) via a JSON.                                                                                                                                             |
 | `spark.kerberos.access.hadoopFileSystems = s3a://pdf-oct-buk-a163bf71/data/`                                                                                        | Lists the Hadoop filesystems (S3A in this case) for which Spark should obtain Kerberos delegation tokens, so it can securely access them. According to Spark security docs: Spark will get tokens for each filesystem listed. ([Apache Spark][7])                                                                  |
+```
 
 [1]: https://docs.cloudera.com/runtime/latest/running-spark-applications/topics/spark-yarn-dynamic-allocation.html?utm_source=chatgpt.com "Dynamic allocation"
 [2]: https://archive.apache.org/dist/spark/docs/2.2.1/configuration.html?utm_source=chatgpt.com "Configuration - Spark 2.2.1 Documentation"
@@ -337,8 +338,7 @@ This table outlines the purpose of the Spark Options used to accelerate the appl
 [4]: https://docs.nvidia.com/spark-rapids/user-guide/24.06/tuning-guide.html?utm_source=chatgpt.com "Tuning Guide — Spark RAPIDS User Guide"
 [5]: https://docs.cloudera.com/cdp-private-cloud-base/7.1.8/cds-3/spark-cds-3.pdf?utm_source=chatgpt.com "Cloudera Runtime 7.1.8"
 [6]: https://nvidia.github.io/spark-rapids/docs/additional-functionality/advanced_configs.html?utm_source=chatgpt.com "Advanced Configuration | spark-rapids"
-[7]: https://spark.apache.org/docs/latest/security.html?utm_source=chatgpt.com "Security - Spark 4.0.1 Documentation"
-``` 
+[7]: https://spark.apache.org/docs/latest/security.html?utm_source=chatgpt.com "Security - Spark 4.0.1 Documentation" 
 
 ## Summary & Next Steps
 
