@@ -92,7 +92,7 @@ read_df.show()
 # Read from Local Project File
 from pyspark.sql import functions as F
 # Define the path to your text file
-file_path = "/home/cdsw/spark-rapids-ml/example.txt"  # Adjust if your file is in a different location
+file_path = "/home/cdsw/spark-rapids-etl/example.txt"  # Adjust if your file is in a different location
 
 # Read the text file into a DataFrame
 df = spark.read.text(file_path)
