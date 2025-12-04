@@ -45,7 +45,7 @@ from pyspark.sql import SparkSession
 
 spark = SparkSession\
   .builder\
-  .appName("Spark-Rapids-Ml")\
+  .appName("Spark-Rapids-ETL")\
   .config('spark.dynamicAllocation.enabled', 'false')\
   .config('spark.executor.cores', 1)\
   .config('spark.executor.resource.gpu.amount', 1)\
