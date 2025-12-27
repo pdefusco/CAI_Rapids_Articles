@@ -80,6 +80,12 @@ cde job run \
 
 ![alt text](../img/datagen-1.png)
 
+Optionally navigate to the AWS S3 Console (or ADLS, HDFS or Ozone if that's what you used instead) and validate the data has been generated.
+
+The datagen setup script should run in about three hours and will generate a parquet dataset with 50 Billion Rows, 10 Thousand Columns, across 10 thousand partitions using Spark. Each of the 10,000 partition files in S3 is about 185 MB in size for a total 1.85 TB for the whole dataset.
+
+![alt text](../img/datagen-2.png)
+
 ##### Create CAI Project
 
 Create a CAI project and clone the repository located at this github URL: ```https://github.com/pdefusco/cmlextensions```
