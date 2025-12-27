@@ -202,6 +202,8 @@ Then, execute the code and monitor progress in the Dashboard.
 
 ![alt text](../img/tasks-8.png)
 
+![alt text](../img/tasks-9.png)
+
 ### Recommendations
 
 * The Dask Cuda Scheduler and Workers run in separate pods. Therefore, when launching the CAI Session for installing requirements and running the code above, a GPU is not required. However, a higher than usual amount of memory is recommended for installing RAPIDS dependencies as these can take a few minutes to install in your environments.
