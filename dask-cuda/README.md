@@ -20,9 +20,67 @@ The cmlextensions library is an open source package maintained by Cloudera AI de
 
 In order to reproduce this example you will need:
 
-* A CML Workspace on Cloudera on Cloud or on Prem with GPU Nodes enabled. Version 2.0.47+ is recommended.
+* A CAI Workbench on Cloudera on Cloud or on Prem with GPU Nodes enabled. Version 2.0.47+ is recommended. This example is compatible with many Nvidia GPU types such as T4, V10, A100, H100, V100, etc. Make sure the Workbench configurations include a GPU Node Group with Nvidia GPU instances and an Autoscale Range of at least 0-10 GPU nodes.
+* Optionally, if you want to run notebook ```02_dask_cuda_join.ipynb``` to test Dask Cuda dataframes at scale you will need a CDE Virtual Cluster to create the dataset as directed below.
 
 ### Setup
+
+##### Optional: Create Datasets to Test Dask Cuda Dataframes at Scale
+
+Using the CDE CLI, run the following commands:
+
+```
+# Set up CDE dependencies:
+
+cde resource delete \
+  --name datagen-setup
+
+cde resource create \
+  --name datagen-setup \
+  --type files
+
+cde resource upload \
+  --name datagen-setup \
+  --local-path 00_cde_datagen/setup.py \
+  --local-path 00_cde_datagen/utils.py
+```
+
+```
+# Create a Python Resource
+
+cde resource create \
+  --name datagen-py \
+  --type files
+
+cde resource upload \
+  --name datagen-py \
+  --local-path 00_cde_datagen/requirements.txt
+```
+
+Before running the next code snippet, set the CDP Data Lake Storage variable locally. This is where your data will be stored. For example, if you're creating the data in S3 you can use something like ```s3a://pdf-dec-buk-70b78c3b/data/dask-example/50Brows_10Kcols_10kparts```
+
+```
+# Create and run the job
+
+cde job create \
+  --name datagen-setup \
+  --type spark \
+  --mount-1-resource datagen-setup \
+  --application-file setup.py \
+  --python-env-resource-name datagen-py
+
+cde job run \
+  --name datagen-setup \
+  --arg $cdp_data_lake_storage \
+  --driver-cores 4 \
+  --driver-memory "10g" \
+  --executor-cores 5 \
+  --executor-memory "20g"
+```
+
+![alt text](../img/datagen-1.png)
+
+##### Create CAI Project
 
 Create a CAI project and clone the repository located at this github URL: ```https://github.com/pdefusco/cmlextensions```
 
@@ -45,16 +103,18 @@ Then, install the cml extensions package:
 pip install git+https://github.com/cloudera/cmlextensions.git
 ```
 
-### Code
+##### Run the Code
 
-Deploy a Dask Cuda cluster with two worker pods, each with two gpu's, by running the following code.
+Open ```01_stress_tests.py``` and familiarize yourself with the code. Follow along the instructions below understand the most important aspects of it.
+
+First, deploy a Dask Cuda cluster with eight worker pods, each with four gpu's, by running the following code.
 
 Shortly after running this you should notice the Dask Scheduler and Workers on the right side of the screen.
 
 ```
 from src.cmlextensions.dask_cuda_cluster.dask_cuda_cluster import DaskCudaCluster
 
-cluster = DaskCudaCluster(num_workers=2, worker_cpu=4, nvidia_gpu=2, worker_memory=12, scheduler_cpu=4, scheduler_memory=12)
+cluster = DaskCudaCluster(num_workers=8, worker_cpu=26, nvidia_gpu=4, worker_memory=120, scheduler_cpu=8, scheduler_memory=64)
 cluster.init()
 ```
 
@@ -90,17 +150,18 @@ result = future.result()
 print(result)
 ```
 
-Monitor your work in the Dask Dashboard.
+Run the rest of the ```code.py``` script and monitor your work in the Dask Dashboard.
 
 ![alt text](../img/dask-dashboard-1.png)
+
 
 ### Recommendations
 
 * The Dask Cuda Scheduler and Workers run in separate pods. Therefore, when launching the CAI Session for installing requirements and running the code above, a GPU is not required. However, a higher than usual amount of memory is recommended for installing RAPIDS dependencies as these can take a few minutes to install in your environments.
 
-* This article was written in March 2025. Use the [RAPIDS selector tool at this site](https://docs.rapids.ai/install/) to locate the right version of CUDA for your environment and update the ```install_requirements.py``` script accordingly.
+* This article was written in December 2025. Use the [RAPIDS selector tool at this site](https://docs.rapids.ai/install/) to locate the right version of CUDA for your environment and update the ```install_requirements.py``` script accordingly.
 
-* When you deploy a CML Session with a GPU, a GPU node rather than a CPU node is deployed. These typically come with higher than usual memory  resources. Therefore, feel free to request large amounts of memory when instantiating the Dask Cuda cluster object, especially if you are the only Workspace user.
+* When you deploy a CAI Session with a GPU, a GPU node rather than a CPU node is deployed. These typically come with higher than usual memory  resources. Therefore, feel free to request large amounts of memory when instantiating the Dask Cuda cluster object, especially if you are the only Workspace user.
 
 * The source code for the cmlextensions package can be found on [github](https://github.com/cloudera/cmlextensions). For customizations, you're welcome to fork or directly load the source code in your environment.
 
