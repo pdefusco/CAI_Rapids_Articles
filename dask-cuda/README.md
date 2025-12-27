@@ -90,7 +90,7 @@ The datagen setup script should run in about three hours and will generate a par
 
 Create a CAI project and clone the repository located at this github URL: ```https://github.com/pdefusco/cmlextensions```
 
-Launch a CML Session with the following Resource Profile:
+Launch a CAI Session with the following Resource Profile:
 
 ```
 Editor: PBJ Workbench
@@ -156,9 +156,15 @@ result = future.result()
 print(result)
 ```
 
-Run the rest of the ```code.py``` script and monitor your work in the Dask Dashboard.
+Run the rest of the ```code.py``` script and monitor your workload in real time in the Dask Dashboard.
 
 ![alt text](../img/dask-dashboard-1.png)
+
+![alt text](../img/dashboard-1.png)
+
+![alt text](../img/dashboard-2.png)
+
+![alt text](../img/dashboard-3.png)
 
 
 ### Recommendations
