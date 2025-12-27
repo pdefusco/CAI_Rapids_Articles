@@ -212,11 +212,9 @@ Then, execute the code and monitor progress in the Dashboard.
 
 ### Recommendations
 
-* The Dask Cuda Scheduler and Workers run in separate pods. Therefore, when launching the CAI Session for installing requirements and running the code above, a GPU is not required. However, a higher than usual amount of memory is recommended for installing RAPIDS dependencies as these can take a few minutes to install in your environments.
-
 * This article was written in December 2025. Use the [RAPIDS selector tool at this site](https://docs.rapids.ai/install/) to locate the right version of CUDA for your environment and update the ```install_requirements.py``` script accordingly.
 
-* When you deploy a CAI Session with a GPU, a GPU node rather than a CPU node is deployed. These typically come with higher than usual memory  resources. Therefore, feel free to request large amounts of memory when instantiating the Dask Cuda cluster object, especially if you are the only Workspace user.
+* When you deploy a CAI Session with a GPU, a GPU node rather than a CPU node is deployed. These typically come with higher than usual memory  resources. Therefore, feel free to request large amounts of memory when instantiating the Dask Cuda cluster Python object, especially if you are the only Workspace user.
 
 * The source code for the cmlextensions package can be found on [github](https://github.com/cloudera/cmlextensions). For customizations, you're welcome to fork or directly load the source code in your environment.
 
