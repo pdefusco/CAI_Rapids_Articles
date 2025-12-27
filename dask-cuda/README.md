@@ -156,7 +156,7 @@ result = future.result()
 print(result)
 ```
 
-Run the rest of the ```code.py``` script and monitor your workload in real time in the Dask Dashboard.
+Run the rest of the ```code.py``` script and monitor your workload in real time in the Dask Dashboard. Explore the Status, Workers, Info and GPU tabs to watch cluster utilization during execution.
 
 ![alt text](../img/dask-dashboard-1.png)
 
