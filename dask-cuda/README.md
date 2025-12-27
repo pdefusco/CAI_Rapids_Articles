@@ -88,9 +88,17 @@ The datagen setup script should run in about three hours and will generate a par
 
 ##### Create CAI Project
 
-Create a CAI project and clone the repository located at this github URL: ```https://github.com/pdefusco/cmlextensions```
+Create a CAI project and clone the repository located at this github URL: ```https://github.com/pdefusco/CAI_Rapids_Articles.git```
 
-Launch a CAI Session with the following Resource Profile:
+Optionally, if you execute notebook 2, set the following project environment variables to access your data from S3. You will need the AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN.
+
+![alt text](../img/env-vars.png)
+
+### Code
+
+##### Run 01_stress_tests.py
+
+Launch a CAI Session with the following Resource Profile. Notice the vCPU and Memory depend on the Resource Profiles available in your Workbench, which can be modified by your Admin. It's important to use a high CPU and Memory profile such as the one below.
 
 ```
 Editor: PBJ Workbench
@@ -98,7 +106,7 @@ Kernel: Python 3.10
 Edition: Nvidia GPU
 Version: 2025.01 or above
 Spark Runtime Add-On: disabled
-Resource Profile: 4 vCPU / 16 GiB Memory / 0 GPU
+Resource Profile: 36 vCPU / 184 GiB Memory / 4 GPU
 ```
 
 In the session, install Dask and CUDA requirements by running the ```install_requirements.py``` script.
@@ -108,8 +116,6 @@ Then, install the cml extensions package:
 ```
 pip install git+https://github.com/cloudera/cmlextensions.git
 ```
-
-##### Run the Code
 
 Open ```01_stress_tests.py``` and familiarize yourself with the code. Follow along the instructions below understand the most important aspects of it.
 
@@ -165,6 +171,23 @@ Run the rest of the ```code.py``` script and monitor your workload in real time 
 ![alt text](../img/dashboard-2.png)
 
 ![alt text](../img/dashboard-3.png)
+
+##### Run 02_dask_cuda_joins.ipynb
+
+Kill the previous Session and launch a new one with the following Resource Profile. Notice the vCPU and Memory depend on the Resource Profiles available in your Workbench, which can be modified by your Admin. It's important to use a high CPU and Memory profile such as the one below.
+
+```
+Editor: JupyterLab
+Kernel: Python 3.10
+Edition: Nvidia GPU
+Version: 2025.01 or above
+Spark Runtime Add-On: disabled
+Resource Profile: 36 vCPU / 184 GiB Memory / 4 GPU
+```
+
+There is no need to reinstall dependencies as long as the Python Kernel version is the same as the one used before.
+
+Next, run the notebook to load the TB dataset from S3 and perform joins and aggregates at scale.
 
 
 ### Recommendations
