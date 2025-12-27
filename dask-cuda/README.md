@@ -1,4 +1,6 @@
-## Recommendations for Using Dask Cuda Clusters in Cloudera AI
+## Dask Cuda Clusters in Cloudera AI
+
+![alt text](../img/sol-arch-dask-cuda.png)
 
 ### Objective
 
@@ -185,6 +187,10 @@ Then, execute the code and monitor progress in the Dashboard.
 ![alt text](../img/tasks-view.png)
 
 ![alt text](../img/tasks-2.png)
+
+![alt text](../img/tasks-3.png)
+
+![alt text](../img/tasks-4.png)
 
 
 ### Recommendations
