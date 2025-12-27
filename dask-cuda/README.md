@@ -92,7 +92,7 @@ The datagen setup script should run in about three hours and will generate a par
 
 Create a CAI project and clone the repository located at this github URL: ```https://github.com/pdefusco/CAI_Rapids_Articles.git```
 
-Optionally, if you execute notebook 2, set the following project environment variables to access your data from S3. You will need the AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN.
+Optionally, if you execute script 2, set the following project environment variables to access your data from S3. You will need the AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN.
 
 ![alt text](../img/env-vars.png)
 
@@ -178,6 +178,8 @@ Run the rest of the ```code.py``` script and monitor your workload in real time 
 
 Kill the previous Session and launch a new one with the same Resource Profile. Open ```02_dask_cuda_joins.py``` and familiarize yourself with the code. This script demonstrates how to accelerate dataframe operations at scale with Dask Cuda including joins, pivots, and writes.
 
+More specifically, it starts by loading a 2 TB parquet dataset into a Dask Distributed dataframe, then joins it four times to obtain a 10 TB dataframe; then, the data is pivoted and flattened and finally written back to S3.
+
 Before running the code update the Storage and Output locations at lines 40 and 41 according to the path where you have created the dataset and where you would like to write the final output after the dataframe joins.
 
 Then, execute the code and monitor progress in the Dashboard.
@@ -192,6 +194,13 @@ Then, execute the code and monitor progress in the Dashboard.
 
 ![alt text](../img/tasks-4.png)
 
+![alt text](../img/tasks-5.png)
+
+![alt text](../img/tasks-6.png)
+
+![alt text](../img/tasks-7.png)
+
+![alt text](../img/tasks-8.png)
 
 ### Recommendations
 
