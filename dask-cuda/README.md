@@ -172,22 +172,19 @@ Run the rest of the ```code.py``` script and monitor your workload in real time 
 
 ![alt text](../img/dashboard-3.png)
 
-##### Run 02_dask_cuda_joins.ipynb
+##### Run 02_dask_cuda_joins.py
 
-Kill the previous Session and launch a new one with the following Resource Profile. Notice the vCPU and Memory depend on the Resource Profiles available in your Workbench, which can be modified by your Admin. It's important to use a high CPU and Memory profile such as the one below.
+Kill the previous Session and launch a new one with the same Resource Profile. Open ```02_dask_cuda_joins.py``` and familiarize yourself with the code. This script demonstrates how to accelerate dataframe operations at scale with Dask Cuda including joins, pivots, and writes.
 
-```
-Editor: JupyterLab
-Kernel: Python 3.10
-Edition: Nvidia GPU
-Version: 2025.01 or above
-Spark Runtime Add-On: disabled
-Resource Profile: 36 vCPU / 184 GiB Memory / 4 GPU
-```
+Before running the code update the Storage and Output locations at lines 40 and 41 according to the path where you have created the dataset and where you would like to write the final output after the dataframe joins.
 
-There is no need to reinstall dependencies as long as the Python Kernel version is the same as the one used before.
+Then, execute the code and monitor progress in the Dashboard.
 
-Next, run the notebook to load the TB dataset from S3 and perform joins and aggregates at scale.
+![alt text](../img/code-out-1.png)
+
+![alt text](../img/tasks-view.png)
+
+![alt text](../img/tasks-2.png)
 
 
 ### Recommendations

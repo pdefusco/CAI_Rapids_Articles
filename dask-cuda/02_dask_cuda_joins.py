@@ -37,17 +37,53 @@
 # #  Author(s): Paul de Fusco
 #***************************************************************************/
 
-!pip install dask distributed dask-cuda
-!pip install dask
-!pip install cloudpickle
-!pip install 'dask[dataframe]'
-!pip install 'dask[complete]'
-!pip install "bokeh!=3.0.*,>=2.4.2"
+STORAGE = "s3a://pdf-dec-buk-70b78c3b/data/dask-example/50Brows_10Kcols_10kparts"
+OUTPUT = "s3a://pdf-dec-buk-70b78c3b/data/dask-example/joined_df"
 
-!pip install \
-    --extra-index-url=https://pypi.nvidia.com \
-    cudf-cu12==24.6.* cuml-cu12==24.6.* \
-    cugraph-cu12==24.6.*
+from src.cmlextensions.dask_cuda_cluster.dask_cuda_cluster import DaskCudaCluster
 
-!pip install gpustat
-!pip install s3fs
+cluster = DaskCudaCluster(num_workers=25, worker_cpu=26, nvidia_gpu=4, worker_memory=120, scheduler_cpu=8, scheduler_memory=64)
+cluster.init()
+
+# SINGLE JOIN
+
+from dask.distributed import Client
+
+client = Client(cluster.get_client_url())
+
+import dask.array as da
+import os
+import dask.dataframe as dd
+
+df_left = dd.read_parquet(STORAGE)
+df_left.head()
+
+df_right = dd.read_parquet(STORAGE)
+df_right.head()
+
+df_join = df_left.set_index('unique_id').join(df_right.set_index('unique_id'), how='inner', on='unique_id', lsuffix='_left2', rsuffix='_right2')
+
+df_join.head()
+
+# MULTI DF JOIN
+
+df3 = dd.read_parquet(STORAGE)
+df4 = dd.read_parquet(STORAGE)
+df5 = dd.read_parquet(STORAGE)
+
+df_join = df_join.set_index('unique_id').join(df3.set_index('unique_id'), how='inner', on='unique_id', lsuffix='_left3', rsuffix='_right3')
+df_join = df_join.set_index('unique_id').join(df4.set_index('unique_id'), how='inner', on='unique_id', lsuffix='_left4', rsuffix='_right4')
+df_join = df_join.set_index('unique_id').join(df5.set_index('unique_id'), how='inner', on='unique_id', lsuffix='_left5', rsuffix='_right5')
+
+df_join.head()
+
+df_join = df_join.categorize('col1_left2')
+df_join = df_join.reset_index(drop=False)
+
+df_join.head()
+
+df_pivot = dd.pivot_table(df_join, index='unique_id', columns='col1_left2', values='col2_left2', aggfunc='mean')
+
+df_pivot_flat = df_pivot.reset_index()
+
+df_pivot_flat.to_parquet(OUTPUT, engine='pyarrow', overwrite=True)
