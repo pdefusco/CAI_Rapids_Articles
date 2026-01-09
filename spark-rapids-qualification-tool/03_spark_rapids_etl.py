@@ -45,7 +45,7 @@ from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
 
-STORAGE = ""
+STORAGE = "s3a://pdf-jan-26-buk-7c0e831f/data/"
 
 spark = SparkSession\
   .builder\
