@@ -1,6 +1,6 @@
 git+https://github.com/fastforwardlabs/cmlbootstrap#egg=cmlbootstrap
-pandas==2.1.3
-pyarrow==14.0.1
+pandas
+pyarrow
 Flask==3.0.0
 jmespath==0.7.1
 seaborn==0.13.2
