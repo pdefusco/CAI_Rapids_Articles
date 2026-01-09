@@ -44,7 +44,7 @@
   "cucim-cu12==25.8.*" "pylibraft-cu12==25.8.*" "raft-dask-cu12==25.8.*" \
   "cuvs-cu12==25.8.*" "nx-cugraph-cu12==25.8.*"
 
-!pip install -r spark-rapids-etl/requirements.txt
+!pip install -r spark-rapids-qualification-tool/requirements.txt
 
 !wget https://raw.githubusercontent.com/apache/spark/refs/heads/master/examples/src/main/scripts/getGpusResources.sh
 !chmod +x getGpusResources.sh
