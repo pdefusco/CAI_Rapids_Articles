@@ -90,7 +90,7 @@ spark = SparkSession\
   .getOrCreate()
 
 # Read from Data Lake Table
-df = spark.read.table("BenchmarkTable")
+df = spark.read.table("BenchmarkTableV2")
 
 df_features = (
     df

@@ -193,7 +193,7 @@ def main():
     #dg.saveFileToCloud(df)
 
     # Save as Hive Table
-    dg.createHiveTable(df, "BenchmarkTable")
+    dg.createHiveTable(df, "BenchmarkTableV2")
 
 
 if __name__ == '__main__':
