@@ -193,7 +193,7 @@ def main():
     #dg.saveFileToCloud(df)
 
     # Save as Hive Table
-    dg.createHiveTable(df, "DataLakeTable")
+    dg.createHiveTable(df, "BenchmarkTable")
 
 
 if __name__ == '__main__':
