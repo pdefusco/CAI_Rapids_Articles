@@ -168,8 +168,8 @@ def main():
 
     USERNAME = os.environ["PROJECT_OWNER"]
     DBNAME = "DEMO_"+USERNAME
-    CONNECTION_NAME = "pdf-oct-aw-dl"
-    STORAGE = "s3a://pdf-oct-buk-a163bf71/data/"
+    CONNECTION_NAME = "pdf-jan-26-aw-dl"
+    STORAGE = "s3a://pdf-jan-26-buk-7c0e831f/data/"
 
     # Instantiate BankDataGen class
     dg = BankDataGen(USERNAME, DBNAME, CONNECTION_NAME, STORAGE)
