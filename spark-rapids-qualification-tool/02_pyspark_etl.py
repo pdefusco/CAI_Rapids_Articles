@@ -58,6 +58,9 @@ spark = SparkSession\
   .config("spark.kerberos.access.hadoopFileSystems", STORAGE) \
   .getOrCreate()
 
+spark.sparkContext.setLogLevel("DEBUG") 
+
+
 # Read from Data Lake Table
 df = spark.read.table("BenchmarkTable")
 
