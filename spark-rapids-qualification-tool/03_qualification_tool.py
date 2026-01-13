@@ -37,4 +37,4 @@
 # #  Author(s): Paul de Fusco
 #***************************************************************************/
 
-!spark_rapids qualification   --platform onprem   --eventlogs file:///home/cdsw/spark-rapids-qualification-tool/spark-event-logs-dir/
+!spark_rapids qualification   --platform onprem   --eventlogs file:///home/cdsw/spark-rapids-qualification-tool/spark-event-logs-dir/eventlog_v2_spark-86889f2821c64bf5bef71f40c33fcee8
