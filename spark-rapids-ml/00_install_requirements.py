@@ -39,10 +39,10 @@
 
 !pip install \
   --extra-index-url=https://pypi.nvidia.com \
-  "cudf-cu12==25.12.*" "dask-cudf-cu12==25.12.*" "cuml-cu12==25.10.*" \
-  "cugraph-cu12==25.12.*" "nx-cugraph-cu12==25.12.*" "cuxfilter-cu12==25.12.*" \
-  "cucim-cu12==25.12.*" "pylibraft-cu12==25.12.*" "raft-dask-cu12==25.12.*" \
-  "cuvs-cu12==25.12.*" "nx-cugraph-cu12==25.12.*"
+  "cudf-cu12==25.10.*"  "cuml-cu12==25.10.*" \
+   "cuxfilter-cu12==25.10.*" \
+  "cucim-cu12==25.10.*" "pylibraft-cu12==25.10.*"  \
+  "cuvs-cu12==25.10.*" 
 
 !pip install -r spark-rapids-ml/requirements.txt
 
