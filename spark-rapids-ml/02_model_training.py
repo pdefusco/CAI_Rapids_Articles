@@ -1,44 +1,3 @@
-#****************************************************************************
-# (C) Cloudera, Inc. 2020-2025
-#  All rights reserved.
-#
-#  Applicable Open Source License: GNU Affero General Public License v3.0
-#
-#  NOTE: Cloudera open source products are modular software products
-#  made up of hundreds of individual components, each of which was
-#  individually copyrighted.  Each Cloudera open source product is a
-#  collective work under U.S. Copyright Law. Your license to use the
-#  collective work is as provided in your written agreement with
-#  Cloudera.  Used apart from the collective work, this file is
-#  licensed for your use pursuant to the open source license
-#  identified above.
-#
-#  This code is provided to you pursuant a written agreement with
-#  (i) Cloudera, Inc. or (ii) a third-party authorized to distribute
-#  this code. If you do not have a written agreement with Cloudera nor
-#  with an authorized and properly licensed third party, you do not
-#  have any rights to access nor to use this code.
-#
-#  Absent a written agreement with Cloudera, Inc. (“Cloudera”) to the
-#  contrary, A) CLOUDERA PROVIDES THIS CODE TO YOU WITHOUT WARRANTIES OF ANY
-#  KIND; (B) CLOUDERA DISCLAIMS ANY AND ALL EXPRESS AND IMPLIED
-#  WARRANTIES WITH RESPECT TO THIS CODE, INCLUDING BUT NOT LIMITED TO
-#  IMPLIED WARRANTIES OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY AND
-#  FITNESS FOR A PARTICULAR PURPOSE; (C) CLOUDERA IS NOT LIABLE TO YOU,
-#  AND WILL NOT DEFEND, INDEMNIFY, NOR HOLD YOU HARMLESS FOR ANY CLAIMS
-#  ARISING FROM OR RELATED TO THE CODE; AND (D)WITH RESPECT TO YOUR EXERCISE
-#  OF ANY RIGHTS GRANTED TO YOU FOR THE CODE, CLOUDERA IS NOT LIABLE FOR ANY
-#  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, PUNITIVE OR
-#  CONSEQUENTIAL DAMAGES INCLUDING, BUT NOT LIMITED TO, DAMAGES
-#  RELATED TO LOST REVENUE, LOST PROFITS, LOSS OF INCOME, LOSS OF
-#  BUSINESS ADVANTAGE OR UNAVAILABILITY, OR LOSS OR CORRUPTION OF
-#  DATA.
-#
-# #  Author(s): Paul de Fusco, James Horsch
-#***************************************************************************/
-
-#!pip install spark-rapids-ml
-
 import os, warnings, sys, logging
 import mlflow
 import pandas as pd
@@ -47,8 +6,8 @@ from datetime import date
 from pyspark.ml.feature import VectorAssembler
 # use the GPU-native implementation
 from spark_rapids_ml.classification import RandomForestClassifier
-###from pyspark.ml.evaluation import MulticlassClassificationEvaluator
-from spark_rapids_ml.metrics.MulticlassMetrics import MulticlassClassificationEvaluator
+from pyspark.ml.evaluation import MulticlassClassificationEvaluator
+###from spark_rapids_ml.metrics.MulticlassMetrics import MulticlassClassificationEvaluator
 from pyspark.sql import SparkSession
 
 import pprint
@@ -56,7 +15,7 @@ import pprint
 USERNAME = os.environ["PROJECT_OWNER"]
 DBNAME = "DEMO_"+USERNAME
 CONNECTION_NAME = "go01-aw-dl"
-STORAGE = "s3a://go01-demo/user/jprosser/spark-rapid-ml/"
+STORAGE =  os.environ["DATA_STORAGE"] 
 DATE = date.today()
 
 RAPIDS_JAR = "/home/cdsw/rapids-4-spark_2.12-25.10.0.jar"
@@ -67,6 +26,8 @@ LOCAL_PACKAGES = "/home/cdsw/.local/lib/python3.10/site-packages"
 NVRTC_LIB_PATH = f"{LOCAL_PACKAGES}/nvidia/cuda_nvrtc/lib"
 WRITABLE_CACHE_DIR = "/tmp/cupy_cache"
 
+# Force-clear any hanging Py4J connections
+from py4j.java_gateway import java_import
 
 try:
     spark.stop()
@@ -97,7 +58,7 @@ spark = SparkSession.builder \
     .config("spark.kerberos.access.hadoopFileSystems", "s3a://go01-demo/user/jprosser/spark-rapids-ml/") \
     .config("spark.plugins", "com.nvidia.spark.SQLPlugin") \
     .config("spark.rapids.sql.enabled", "true") \
-    .config("spark.driver.extraJavaOptions", f"-Dlog4j.configuration=file:log4j.properties -Djava.library.path={NVRTC_LIB_PATH}") \
+    .config("spark.driver.extraJavaOptions", f"-Djava.library.path={NVRTC_LIB_PATH}") \
     .config("spark.sql.cache.serializer", "com.nvidia.spark.ParquetCachedBatchSerializer") \
     .config("spark.shuffle.service.enabled", "false") \
     .config('spark.sql.shuffle.partitions', '200') \
@@ -162,7 +123,7 @@ rf_classifier = RandomForestClassifier(
     featuresCols=feature_cols, 
     numTrees=20
 )
-# [ NOTE: setting numTrees != 20 will result in a numTrees mismatch error when we do the onnx converstion}
+# [ NOTE: setting numTrees != 20 will result in a numTrees mismatch error when we do the onnx conversion}
 
 
 # Run the training logic in C++ on the GPU via cuML
@@ -170,17 +131,14 @@ print("Training Spark RAPIDS ML model...")
 rf_model = rf_classifier.fit(training_data)
 print("Model training complete.")
 
-
 # We drop 'probability' and 'rawPrediction' because they are VectorUDT types
 # that Spark SQL would otherwise force back to the CPU for formatting.
 predictions = rf_model.transform(test_data).drop("probability", "rawPrediction")
-
 
 predictions.select("prediction", "fraud_trx").show(5)
 
 # Show the plan that fully utilize the GPU at all stages
 predictions.explain(mode="formatted")
-
 
 evaluator = MulticlassClassificationEvaluator(
     labelCol="fraud_trx", 
@@ -207,8 +165,6 @@ def truncate_to_binary(obj, *args, **kwargs):
 # Inject the fix
 np.array = truncate_to_binary
 
-
-
 print("Moving cleaned model back to CPU...")
 rf_model_cpu = rf_model.cpu()
 spark.conf.set("spark.rapids.sql.explain", "NONE")
@@ -225,4 +181,3 @@ print("✨ SUCCESS!")
 mlflow.onnx.log_model(onnx_model, "fraud-clf-onnx-spark-rapids-ml",
                       registered_model_name="fraud-clf-onnx-spark-rapids-ml"
                      )
-
