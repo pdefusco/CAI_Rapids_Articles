@@ -15,4 +15,4 @@ setuptools>=75.8.1
 xgboost==2.1.4
 onnxmltools>=1.13.0
 onnxruntime==1.21.0
-spark_rapids_ml
+spark_rapids_ml==25.10.0
