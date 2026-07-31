@@ -1,0 +1,322 @@
+#****************************************************************************
+# (C) Cloudera, Inc. 2020-2026
+#  All rights reserved.
+#
+#  Applicable Open Source License: GNU Affero General Public License v3.0
+#
+#  NOTE: Cloudera open source products are modular software products
+#  made up of hundreds of individual components, each of which was
+#  individually copyrighted.  Each Cloudera open source product is a
+#  collective work under U.S. Copyright Law. Your license to use the
+#  collective work is as provided in your written agreement with
+#  Cloudera.  Used apart from the collective work, this file is
+#  licensed for your use pursuant to the open source license
+#  identified above.
+#
+#  This code is provided to you pursuant a written agreement with
+#  (i) Cloudera, Inc. or (ii) a third-party authorized to distribute
+#  this code. If you do not have a written agreement with Cloudera nor
+#  with an authorized and properly licensed third party, you do not
+#  have any rights to access nor to use this code.
+#
+#  Absent a written agreement with Cloudera, Inc. (“Cloudera”) to the
+#  contrary, A) CLOUDERA PROVIDES THIS CODE TO YOU WITHOUT WARRANTIES OF ANY
+#  KIND; (B) CLOUDERA DISCLAIMS ANY AND ALL EXPRESS AND IMPLIED
+#  WARRANTIES WITH RESPECT TO THIS CODE, INCLUDING BUT NOT LIMITED TO
+#  IMPLIED WARRANTIES OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY AND
+#  FITNESS FOR A PARTICULAR PURPOSE; (C) CLOUDERA IS NOT LIABLE TO YOU,
+#  AND WILL NOT DEFEND, INDEMNIFY, NOR HOLD YOU HARMLESS FOR ANY CLAIMS
+#  ARISING FROM OR RELATED TO THE CODE; AND (D)WITH RESPECT TO YOUR EXERCISE
+#  OF ANY RIGHTS GRANTED TO YOU FOR THE CODE, CLOUDERA IS NOT LIABLE FOR ANY
+#  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, PUNITIVE OR
+#  CONSEQUENTIAL DAMAGES INCLUDING, BUT NOT LIMITED TO, DAMAGES
+#  RELATED TO LOST REVENUE, LOST PROFITS, LOSS OF INCOME, LOSS OF
+#  BUSINESS ADVANTAGE OR UNAVAILABILITY, OR LOSS OR CORRUPTION OF
+#  DATA.
+#
+# #  Author(s): Paul de Fusco
+#***************************************************************************/
+
+import os
+
+from pyspark.sql import functions as F
+import cml.data_v1 as cmldata
+
+
+class MerchantDimension:
+
+    def __init__(self, connection_name, database):
+
+        self.connection_name = connection_name
+        self.database = database
+
+    ############################################################
+
+    def createSparkConnection(self):
+
+        conn = cmldata.get_connection(self.connection_name)
+
+        spark = conn.get_spark_session()
+
+        spark.conf.set("spark.sql.shuffle.partitions", "800")
+
+        return spark
+
+    ############################################################
+
+    def generateMerchants(
+            self,
+            spark,
+            rows=500000):
+
+        merchants = (
+
+            spark.range(rows)
+
+            .withColumnRenamed(
+                "id",
+                "merchant_id"
+            )
+
+            ####################################################
+            # Geography
+            ####################################################
+
+            .withColumn(
+                "state",
+                F.expr("""
+
+                CASE (merchant_id % 15)
+
+                    WHEN 0 THEN 'CA'
+                    WHEN 1 THEN 'NY'
+                    WHEN 2 THEN 'TX'
+                    WHEN 3 THEN 'FL'
+                    WHEN 4 THEN 'WA'
+                    WHEN 5 THEN 'IL'
+                    WHEN 6 THEN 'AZ'
+                    WHEN 7 THEN 'GA'
+                    WHEN 8 THEN 'MA'
+                    WHEN 9 THEN 'NC'
+                    WHEN 10 THEN 'OH'
+                    WHEN 11 THEN 'PA'
+                    WHEN 12 THEN 'VA'
+                    WHEN 13 THEN 'NJ'
+                    ELSE 'CO'
+
+                END
+
+                """)
+            )
+
+            .withColumn(
+                "region",
+                F.expr("""
+
+                CASE
+
+                    WHEN state IN ('CA','WA','OR') THEN 'WEST'
+
+                    WHEN state IN ('TX','AZ','CO') THEN 'SOUTHWEST'
+
+                    WHEN state IN ('NY','NJ','PA','MA') THEN 'NORTHEAST'
+
+                    WHEN state IN ('IL','OH') THEN 'MIDWEST'
+
+                    ELSE 'SOUTHEAST'
+
+                END
+
+                """)
+            )
+
+            ####################################################
+            # Merchant Attributes
+            ####################################################
+
+            .withColumn(
+                "merchant_category",
+                F.expr("""
+
+                CASE (merchant_id % 12)
+
+                    WHEN 0 THEN 'Retail'
+                    WHEN 1 THEN 'Restaurant'
+                    WHEN 2 THEN 'Fuel'
+                    WHEN 3 THEN 'Travel'
+                    WHEN 4 THEN 'Healthcare'
+                    WHEN 5 THEN 'Groceries'
+                    WHEN 6 THEN 'Utilities'
+                    WHEN 7 THEN 'Electronics'
+                    WHEN 8 THEN 'Entertainment'
+                    WHEN 9 THEN 'Gaming'
+                    WHEN 10 THEN 'Crypto'
+                    ELSE 'Insurance'
+
+                END
+
+                """)
+            )
+
+            .withColumn(
+                "merchant_name",
+                F.concat(
+                    F.lit("MERCHANT_"),
+                    F.col("merchant_id")
+                )
+            )
+
+            ####################################################
+            # Risk
+            ####################################################
+
+            .withColumn(
+                "risk_level",
+                F.expr("""
+
+                CASE
+
+                    WHEN merchant_category IN
+                    ('Gaming','Crypto')
+
+                    THEN 'HIGH'
+
+                    WHEN merchant_category IN
+                    ('Electronics','Travel')
+
+                    THEN 'MEDIUM'
+
+                    ELSE 'LOW'
+
+                END
+
+                """)
+            )
+
+            ####################################################
+            # Revenue Tier
+            ####################################################
+
+            .withColumn(
+                "annual_revenue",
+
+                F.round(
+
+                    F.rand(seed=10) * 100000000,
+
+                    2
+
+                )
+
+            )
+
+            .withColumn(
+                "merchant_size",
+
+                F.expr("""
+
+                CASE
+
+                    WHEN annual_revenue < 1000000
+                        THEN 'SMALL'
+
+                    WHEN annual_revenue < 10000000
+                        THEN 'MEDIUM'
+
+                    ELSE 'LARGE'
+
+                END
+
+                """)
+            )
+
+            ####################################################
+            # Metadata
+            ####################################################
+
+            .withColumn(
+                "opened_year",
+
+                1990 + (F.col("merchant_id") % 35)
+
+            )
+
+            .withColumn(
+                "active",
+
+                F.when(
+                    F.col("merchant_id") % 100 == 0,
+                    False
+                ).otherwise(True)
+
+            )
+
+            ####################################################
+
+            .repartition(800)
+
+        )
+
+        return merchants
+
+    ############################################################
+
+    def saveTable(self, df):
+
+        df.write.mode("overwrite").saveAsTable(
+            f"{self.database}.MERCHANTS"
+        )
+
+        print()
+
+        print("Merchant table created")
+
+        print()
+
+        print(f"Rows: {df.count():,}")
+
+        print()
+
+        df.show(10, False)
+
+
+############################################################
+
+def main():
+
+    USERNAME = os.environ["PROJECT_OWNER"]
+
+    DATABASE = f"DEMO_{USERNAME}"
+
+    CONNECTION_NAME = "pdf0714-aw-dl"
+
+    generator = MerchantDimension(
+
+        CONNECTION_NAME,
+
+        DATABASE
+
+    )
+
+    spark = generator.createSparkConnection()
+
+    merchants = generator.generateMerchants(
+
+        spark,
+
+        rows=500000
+
+    )
+
+    generator.saveTable(
+
+        merchants
+
+    )
+
+
+############################################################
+
+if __name__ == "__main__":
+
+    main()

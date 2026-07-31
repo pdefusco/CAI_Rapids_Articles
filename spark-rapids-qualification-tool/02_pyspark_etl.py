@@ -1,94 +1,80 @@
-#****************************************************************************
-# (C) Cloudera, Inc. 2020-2026
-#  All rights reserved.
-#
-#  Applicable Open Source License: GNU Affero General Public License v3.0
-#
-#  NOTE: Cloudera open source products are modular software products
-#  made up of hundreds of individual components, each of which was
-#  individually copyrighted.  Each Cloudera open source product is a
-#  collective work under U.S. Copyright Law. Your license to use the
-#  collective work is as provided in your written agreement with
-#  Cloudera.  Used apart from the collective work, this file is
-#  licensed for your use pursuant to the open source license
-#  identified above.
-#
-#  This code is provided to you pursuant a written agreement with
-#  (i) Cloudera, Inc. or (ii) a third-party authorized to distribute
-#  this code. If you do not have a written agreement with Cloudera nor
-#  with an authorized and properly licensed third party, you do not
-#  have any rights to access nor to use this code.
-#
-#  Absent a written agreement with Cloudera, Inc. (“Cloudera”) to the
-#  contrary, A) CLOUDERA PROVIDES THIS CODE TO YOU WITHOUT WARRANTIES OF ANY
-#  KIND; (B) CLOUDERA DISCLAIMS ANY AND ALL EXPRESS AND IMPLIED
-#  WARRANTIES WITH RESPECT TO THIS CODE, INCLUDING BUT NOT LIMITED TO
-#  IMPLIED WARRANTIES OF TITLE, NON-INFRINGEMENT, MERCHANTABILITY AND
-#  FITNESS FOR A PARTICULAR PURPOSE; (C) CLOUDERA IS NOT LIABLE TO YOU,
-#  AND WILL NOT DEFEND, INDEMNIFY, NOR HOLD YOU HARMLESS FOR ANY CLAIMS
-#  ARISING FROM OR RELATED TO THE CODE; AND (D)WITH RESPECT TO YOUR EXERCISE
-#  OF ANY RIGHTS GRANTED TO YOU FOR THE CODE, CLOUDERA IS NOT LIABLE FOR ANY
-#  DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, PUNITIVE OR
-#  CONSEQUENTIAL DAMAGES INCLUDING, BUT NOT LIMITED TO, DAMAGES
-#  RELATED TO LOST REVENUE, LOST PROFITS, LOSS OF INCOME, LOSS OF
-#  BUSINESS ADVANTAGE OR UNAVAILABILITY, OR LOSS OR CORRUPTION OF
-#  DATA.
-#
-# #  Author(s): Paul de Fusco
-#***************************************************************************/
-
-import os, warnings, sys, logging
-import pandas as pd
-import numpy as np
-from datetime import date
+import os
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
 
+STORAGE = "s3a://pdf0714-buk-d7392db3/data"
 
-STORAGE = "s3a://pdf-jan-26-buk-7c0e831f/data/"
+spark = (
+    SparkSession.builder
+        .appName("Spark-ETL-v1")
+        .config("spark.driver.cores", 4)
+        .config("spark.driver.memory", "4g")
+        .config("spark.dynamicAllocation.enabled", "true")
+        .config("spark.executor.cores", 4)
+        .config("spark.executor.memory", "8g")
+        .config("spark.sql.shuffle.partitions", "800")
+        .config("spark.kerberos.access.hadoopFileSystems", STORAGE)
+        .getOrCreate()
+)
 
-spark = SparkSession\
-  .builder\
-  .appName("Spark-ETL")\
-  .config('spark.driver.cores', 4)\
-  .config('spark.driver.memory', '4g')\
-  .config('spark.dynamicAllocation.enabled', 'true')\
-  .config('spark.executor.cores', 4)\
-  .config('spark.executor.memory', '8g')\
-  .config("spark.kerberos.access.hadoopFileSystems", STORAGE) \
-  .getOrCreate()
+###########################################################
+# Read Data
+###########################################################
 
-spark.sparkContext.setLogLevel("DEBUG") 
+df = (
+    spark.read.table("BenchmarkTableV2")
+    .repartition(800, "customer_id")
+)
 
-
-# Read from Data Lake Table
-df = spark.read.table("BenchmarkTable")
+###########################################################
+# Feature Engineering
+###########################################################
 
 df_features = (
     df
     .withColumn(
         "total_assets",
-        F.col("bank_account_balance") +
-        F.col("sec_bank_account_balance") +
-        F.col("savings_account_balance") +
-        F.col("sec_savings_account_balance")
+        F.col("bank_account_balance")
+        + F.col("sec_bank_account_balance")
+        + F.col("savings_account_balance")
+        + F.col("sec_savings_account_balance")
     )
     .withColumn(
         "total_liabilities",
-        F.col("credit_card_balance") +
-        F.col("mortgage_balance") +
-        F.col("primary_loan_balance") +
-        F.col("secondary_loan_balance") +
-        F.col("uni_loan_balance")
+        F.col("credit_card_balance")
+        + F.col("mortgage_balance")
+        + F.col("primary_loan_balance")
+        + F.col("secondary_loan_balance")
+        + F.col("uni_loan_balance")
     )
     .withColumn(
         "net_worth",
         F.col("total_assets") - F.col("total_liabilities")
     )
+    .withColumn(
+        "credit_utilization",
+        F.col("credit_card_balance") /
+        (F.col("credit_card_balance") + F.lit(5000))
+    )
+    .withColumn(
+        "debt_ratio",
+        F.col("total_liabilities") /
+        (F.col("total_assets") + F.lit(1))
+    )
+    .withColumn(
+        "transaction_fee",
+        F.col("transaction_amount") * F.lit(0.023)
+    )
 )
+
+###########################################################
+# Dimension Tables
+###########################################################
 
 age_dim = (
     df_features
+    .select("age")
+    .distinct()
     .withColumn(
         "age_bucket",
         F.when(F.col("age") < 30, "18-29")
@@ -96,36 +82,107 @@ age_dim = (
          .when(F.col("age") < 60, "45-59")
          .otherwise("60+")
     )
-    .groupBy("age", "age_bucket")
-    .count()     # forces shuffle
-    .drop("count")
 )
 
-df_joined = (
+state_dim = (
     df_features
-    .join(age_dim, on="age", how="inner")
+    .select("state")
+    .distinct()
+    .withColumn(
+        "state_region",
+        F.when(F.col("state").isin("CA", "WA", "OR"), "West")
+         .when(F.col("state").isin("NY", "NJ", "MA"), "East")
+         .when(F.col("state").isin("TX", "OK"), "South")
+         .otherwise("Other")
+    )
 )
 
-fraud_metrics = (
-    df_joined
-    .groupBy("age_bucket", "fraud_trx")
+merchant_dim = (
+    df_features
+    .select("merchant_category")
+    .distinct()
+    .withColumn(
+        "merchant_risk",
+        F.when(
+            F.col("merchant_category").isin(
+                "Gaming",
+                "Crypto",
+                "Electronics"
+            ),
+            "High"
+        ).otherwise("Normal")
+    )
+)
+
+###########################################################
+# Multiple Joins
+###########################################################
+
+joined = (
+    df_features
+        .join(age_dim, "age")
+        .join(state_dim, "state")
+        .join(merchant_dim, "merchant_category")
+)
+
+###########################################################
+# Large Aggregation
+###########################################################
+
+agg1 = (
+    joined
+    .groupBy(
+        "state_region",
+        "merchant_category",
+        "merchant_risk",
+        "age_bucket",
+        "fraud_trx"
+    )
     .agg(
         F.count("*").alias("txn_count"),
-        F.sum("transaction_amount").alias("total_trx_amount"),
-        F.avg("transaction_amount").alias("avg_trx_amount"),
+        F.sum("transaction_amount").alias("total_amount"),
+        F.avg("transaction_amount").alias("avg_amount"),
+        F.max("transaction_amount").alias("max_amount"),
+        F.min("transaction_amount").alias("min_amount"),
+        F.stddev("transaction_amount").alias("stddev_amount"),
         F.avg("net_worth").alias("avg_net_worth"),
-        F.stddev("transaction_amount").alias("trx_stddev")
+        F.avg("credit_utilization").alias("avg_credit_utilization"),
+        F.avg("debt_ratio").alias("avg_debt_ratio"),
+        F.sum("transaction_fee").alias("total_fee")
     )
 )
 
-final_summary = (
-    fraud_metrics
-    .groupBy("fraud_trx")
+###########################################################
+# Second Aggregation
+###########################################################
+
+agg2 = (
+    agg1
+    .groupBy(
+        "state_region",
+        "fraud_trx"
+    )
     .agg(
-        F.sum("txn_count").alias("total_txns"),
-        F.sum("total_trx_amount").alias("total_amount"),
-        F.avg("avg_net_worth").alias("overall_avg_net_worth")
+        F.sum("txn_count").alias("transactions"),
+        F.sum("total_amount").alias("total_amount"),
+        F.avg("avg_net_worth").alias("avg_net_worth"),
+        F.avg("avg_credit_utilization").alias("credit_utilization"),
+        F.avg("avg_debt_ratio").alias("avg_debt_ratio"),
+        F.sum("total_fee").alias("fees_collected")
     )
 )
 
-final_summary.show()
+###########################################################
+# Global Sort
+###########################################################
+
+final = (
+    agg2
+    .orderBy(
+        F.desc("total_amount")
+    )
+)
+
+final.show()
+
+print("Completed Spark ETL v1")

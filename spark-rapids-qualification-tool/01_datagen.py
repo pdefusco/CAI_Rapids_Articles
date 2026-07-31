@@ -61,7 +61,7 @@ class BankDataGen:
         self.storage = storage
 
 
-    def dataGen(self, spark, shuffle_partitions_requested = 10, partitions_requested = 10, data_rows = 10000000):
+    def dataGen(self, spark, shuffle_partitions_requested = 400, partitions_requested = 800, data_rows = 100000000):
         """
         Method to create credit card transactions in Spark Df
         """
@@ -168,8 +168,8 @@ def main():
 
     USERNAME = os.environ["PROJECT_OWNER"]
     DBNAME = "DEMO_"+USERNAME
-    CONNECTION_NAME = "pdf-jan-26-aw-dl"
-    STORAGE = "s3a://pdf-jan-26-buk-7c0e831f/data/"
+    CONNECTION_NAME = "pdf0714-aw-dl"
+    STORAGE = "s3a://pdf0714-buk-d7392db3/data"
 
     # Instantiate BankDataGen class
     dg = BankDataGen(USERNAME, DBNAME, CONNECTION_NAME, STORAGE)
