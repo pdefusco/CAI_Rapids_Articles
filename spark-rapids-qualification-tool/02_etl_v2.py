@@ -158,7 +158,7 @@ class BankingETLv2:
 
 
         transactions = spark.table(
-            f"{self.database}.TRANSACTIONS"
+            f"{self.database}.TRX"
         )
 
 
