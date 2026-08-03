@@ -75,7 +75,7 @@ class CustomerDimension:
     def generateCustomers(
             self,
             spark,
-            rows=50000000):
+            rows=5000000):
 
         customers = (
 
@@ -259,7 +259,7 @@ def main():
 
         spark,
 
-        rows=20000000
+        rows=2000000
 
     )
 
