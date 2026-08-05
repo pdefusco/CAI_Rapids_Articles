@@ -68,6 +68,10 @@ class CustomerDimension:
             "800"
         )
 
+        from pyspark import SparkContext
+        SparkContext.setSystemProperty('spark.executor.cores', '5')
+        SparkContext.setSystemProperty('spark.executor.memory', '10g')
+
         return spark
 
     ##############################################################
