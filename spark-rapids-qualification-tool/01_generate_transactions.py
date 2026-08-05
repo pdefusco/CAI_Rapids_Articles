@@ -74,7 +74,7 @@ class TransactionFactGenerator:
     def generateTransactions(
             self,
             spark,
-            rows=250000000):
+            rows=25000000):
 
         customers = 20000000
         accounts = 30000000
@@ -521,7 +521,7 @@ def main():
 
         spark,
 
-        rows=100000000
+        rows=10000000
 
     )
 

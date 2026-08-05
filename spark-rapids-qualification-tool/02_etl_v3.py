@@ -675,7 +675,7 @@ def main():
 
 
     DATABASE = (
-        f"{USERNAME}"
+        f"DEMO_{USERNAME}"
     )
 
 
