@@ -477,7 +477,7 @@ class TransactionFactGenerator:
             "overwrite"
         ).saveAsTable(
 
-            f"{self.database}.TRX"
+            f"{self.database}.TR"
 
         )
 
