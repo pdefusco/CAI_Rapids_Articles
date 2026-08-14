@@ -54,6 +54,7 @@
 
 
 import os
+import time
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -166,7 +167,7 @@ class BankingETLv3:
 
 
         transactions = spark.table(
-            f"{self.database}.TR"
+            f"{self.database}.TRX"
         )
 
 
@@ -711,6 +712,9 @@ def main():
     )
 
 
+    start_time = time.time()
+
+
     spark = job.createSparkConnection()
 
 
@@ -721,6 +725,15 @@ def main():
 
     job.save(
         output
+    )
+
+
+    end_time = time.time()
+
+    elapsed = end_time - start_time
+
+    print(
+        f"\nTotal ETL job time: {elapsed:.2f} seconds ({elapsed/60:.2f} minutes)"
     )
 
 

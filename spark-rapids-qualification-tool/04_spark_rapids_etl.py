@@ -54,6 +54,7 @@
 
 
 import os
+import time
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -85,6 +86,13 @@ class BankingETLv3:
 
     def createSparkConnection(self):
 
+        # -----------------------------------------------------------------
+        # NOTE: Update this path to match where the RAPIDS jar actually
+        # resolves to on disk. Find it with:
+        #   find / -name "rapids-4-spark*26.02.0*.jar" 2>/dev/null
+        # -----------------------------------------------------------------
+        RAPIDS_JAR_PATH = "/home/cdsw/.ivy2/jars/com.nvidia_rapids-4-spark_2.12-26.02.0.jar"
+
         spark = (
 
             SparkSession.builder
@@ -113,6 +121,25 @@ class BankingETLv3:
             .config(
                 "spark.executor.resource.gpu.vendor",
                 "nvidia.com"
+            )
+            .config(
+                "spark.shuffle.manager",
+                "com.nvidia.spark.rapids.spark351.RapidsShuffleManager"
+            )
+
+            # ------------------------------------------------------------------
+            # Explicit RAPIDS jar classpath (fixes ClassNotFoundException on
+            # RapidsShuffleManager -- spark.jars.packages alone does not
+            # reliably reach the executor classpath in time for shuffle
+            # manager initialization)
+            # ------------------------------------------------------------------
+            .config(
+                "spark.driver.extraClassPath",
+                RAPIDS_JAR_PATH
+            )
+            .config(
+                "spark.executor.extraClassPath",
+                RAPIDS_JAR_PATH
             )
 
             # ------------------------------------------------------------------
@@ -277,7 +304,7 @@ class BankingETLv3:
 
 
         transactions = spark.table(
-            f"{self.database}.TR"
+            f"{self.database}.TRX"
         )
 
 
@@ -822,6 +849,9 @@ def main():
     )
 
 
+    start_time = time.time()
+
+
     spark = job.createSparkConnection()
 
 
@@ -832,6 +862,15 @@ def main():
 
     job.save(
         output
+    )
+
+
+    end_time = time.time()
+
+    elapsed = end_time - start_time
+
+    print(
+        f"\nTotal ETL job time: {elapsed:.2f} seconds ({elapsed/60:.2f} minutes)"
     )
 
 
