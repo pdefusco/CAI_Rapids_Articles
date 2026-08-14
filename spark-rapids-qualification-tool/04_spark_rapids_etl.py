@@ -95,8 +95,8 @@ class BankingETLv3:
             # Resources
             # ------------------------------------------------------------------
             .config("spark.dynamicAllocation.enabled", "false")
-            .config("spark.executor.instances", "1")
-            .config("spark.executor.cores", "1")
+            .config("spark.executor.instances", "12")
+            .config("spark.executor.cores", "4")
             .config("spark.executor.memory", "16g")
             .config("spark.executor.memoryOverhead", "3g")
             .config("spark.driver.memory", "10g")
@@ -105,6 +105,7 @@ class BankingETLv3:
             # GPU Configuration
             # ------------------------------------------------------------------
             .config("spark.executor.resource.gpu.amount", "1")
+            .config("spark.task.resource.gpu.amount", 0.250)
             .config(
                 "spark.executor.resource.gpu.discoveryScript",
                 "/home/cdsw/getGpusResources.sh"
@@ -123,7 +124,12 @@ class BankingETLv3:
             )
             .config(
                 "spark.jars.packages",
-                "com.nvidia:rapids-4-spark_2.12:25.08.0"
+#                "com.nvidia:rapids-4-spark_2.12:25.08.0"
+                "com.nvidia:rapids-4-spark_2.12:26.02.0"
+            )
+          .config(
+              "spark.rapids.shims-provider-override",
+              "com.nvidia.spark.rapids.shims.spark351.SparkShimServiceProvider",
             )
             .config(
                 "spark.kryo.registrator",
@@ -190,10 +196,10 @@ class BankingETLv3:
                 "true"
             )
 
-            .config(
-                "spark.rapids.shims-provider-override",
-                "com.nvidia.spark.rapids.shims.spark330.SparkShimServiceProvider"
-            )
+#            .config(
+#                "spark.rapids.shims-provider-override",
+#                "com.nvidia.spark.rapids.shims.spark330.SparkShimServiceProvider"
+#            )
 
             # ------------------------------------------------------------------
             # Spark Optimizations
@@ -227,25 +233,25 @@ class BankingETLv3:
             # ------------------------------------------------------------------
             # Storage
             # ------------------------------------------------------------------
-            .config(
-                "spark.hadoop.fs.s3a.custom.signers",
-                "RazS3SignerPlugin:org.apache.ranger.raz.hook.s3.RazS3SignerPlugin:org.apache.ranger.raz.hook.s3.RazS3SignerPluginInitializer"
-            )
+#            .config(
+#                "spark.hadoop.fs.s3a.custom.signers",
+#                "RazS3SignerPlugin:org.apache.ranger.raz.hook.s3.RazS3SignerPlugin:org.apache.ranger.raz.hook.s3.RazS3SignerPluginInitializer"
+#            )
+#
+#            .config(
+#                "spark.hadoop.fs.s3a.s3.signing-algorithm",
+#                "RazS3SignerPlugin"
+#            )
+#
+#            .config(
+#                "spark.hadoop.fs.s3a.aws.credentials.provider",
+#                "org.apache.ranger.raz.hook.s3.RazCredentialProvider"
+#            )
 
-            .config(
-                "spark.hadoop.fs.s3a.s3.signing-algorithm",
-                "RazS3SignerPlugin"
-            )
-
-            .config(
-                "spark.hadoop.fs.s3a.aws.credentials.provider",
-                "org.apache.ranger.raz.hook.s3.RazCredentialProvider"
-            )
-
-            .config(
-                "spark.kubernetes.executor.podTemplateFile",
-                "/tmp/spark-executor.json"
-            )
+#            .config(
+#                "spark.kubernetes.executor.podTemplateFile",
+#                "/tmp/spark-executor.json"
+#            )
 
             .config(
                 "spark.kerberos.access.hadoopFileSystems",
@@ -790,7 +796,7 @@ def main():
 
 
     DATABASE = (
-        f"DEMO_{USERNAME}"
+        f"DEMO_pauldefusco"
     )
 
 
