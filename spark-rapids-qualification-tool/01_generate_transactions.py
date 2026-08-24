@@ -61,15 +61,15 @@ class TransactionFactGenerator:
 
         spark = conn.get_spark_session()
 
-        spark.conf.set(
-            "spark.sql.shuffle.partitions",
-            "800"
-        )
-
+#        spark.conf.set(
+#            "spark.sql.shuffle.partitions",
+#            "800"
+#        )
+        
         from pyspark import SparkContext
-        SparkContext.setSystemProperty('spark.executor.cores', '5')
-        SparkContext.setSystemProperty('spark.executor.memory', '10g')
-
+        SparkContext.setSystemProperty('spark.executor.cores', '5')
+        SparkContext.setSystemProperty('spark.executor.memory', '20g')
+        
         return spark
 
 
@@ -78,7 +78,7 @@ class TransactionFactGenerator:
     def generateTransactions(
             self,
             spark,
-            rows=25000000):
+            rows=2500000):
 
         customers = 20000000
         accounts = 30000000
@@ -464,7 +464,7 @@ class TransactionFactGenerator:
             )
 
 
-            .repartition(800)
+#            .repartition(800)
 
         )
 
@@ -481,7 +481,7 @@ class TransactionFactGenerator:
             "overwrite"
         ).saveAsTable(
 
-            f"{self.database}.TR"
+            f"{self.database}.TRS_v7"
 
         )
 
@@ -525,7 +525,7 @@ def main():
 
         spark,
 
-        rows=10000000
+        rows=25000000
 
     )
 

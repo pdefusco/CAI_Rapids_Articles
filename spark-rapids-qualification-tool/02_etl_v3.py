@@ -54,6 +54,7 @@
 
 
 import os
+import time
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
@@ -84,6 +85,11 @@ class BankingETLv3:
     ############################################################
 
     def createSparkConnection(self):
+      
+        os.makedirs(
+        "/home/cdsw/spark-rapids-qualification-tool/spark-event-logs-dir",
+        exist_ok=True
+        )
 
 
         spark = (
@@ -116,7 +122,7 @@ class BankingETLv3:
 
             .config(
                 "spark.executor.memory",
-                "8g"
+                "16g"
             )
 
             .config(
@@ -129,6 +135,11 @@ class BankingETLv3:
                 self.storage
             )
 
+            .config(
+            "spark.eventLog.dir",
+            "file:///home/cdsw/spark-rapids-qualification-tool/spark-event-logs-dir"
+            )
+          
             .getOrCreate()
 
         )
@@ -156,7 +167,7 @@ class BankingETLv3:
 
 
         transactions = spark.table(
-            f"{self.database}.TR"
+            f"{self.database}.TRX"
         )
 
 
@@ -675,7 +686,7 @@ def main():
 
 
     DATABASE = (
-        f"DEMO_{USERNAME}"
+        f"DEMO_pauldefusco"
     )
 
 
@@ -701,6 +712,9 @@ def main():
     )
 
 
+    start_time = time.time()
+
+
     spark = job.createSparkConnection()
 
 
@@ -711,6 +725,15 @@ def main():
 
     job.save(
         output
+    )
+
+
+    end_time = time.time()
+
+    elapsed = end_time - start_time
+
+    print(
+        f"\nTotal ETL job time: {elapsed:.2f} seconds ({elapsed/60:.2f} minutes)"
     )
 
 
