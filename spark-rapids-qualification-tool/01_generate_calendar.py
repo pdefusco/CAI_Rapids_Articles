@@ -60,10 +60,10 @@ class CalendarDimension:
         spark = conn.get_spark_session()
 
         from pyspark import SparkContext
-        SparkContext.setSystemProperty('spark.executor.cores', '5')
-        SparkContext.setSystemProperty('spark.executor.memory', '10g')
+        SparkContext.setSystemProperty('spark.executor.cores', '5')
+        SparkContext.setSystemProperty('spark.executor.memory', '10g')
 
-        return spark
+        return spark
 
     ############################################################
 
