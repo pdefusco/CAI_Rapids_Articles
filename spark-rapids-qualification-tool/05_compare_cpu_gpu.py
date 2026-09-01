@@ -17,6 +17,8 @@ Usage:
 
 No required arguments -- works the same whether launched from a terminal
 or run directly in a Cloudera AI Workbench session.
+
+Author: Brandon Antone
 """
 import argparse
 import importlib.util
