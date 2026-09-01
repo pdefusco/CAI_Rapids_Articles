@@ -3,14 +3,22 @@
 
 Auto-discovers event logs under spark-event-logs-dir (the directory every
 ETL script here points spark.eventLog.dir at), profiles the two most
-recent ones with ../spark-log-profiler, and reports the speedup as a text
-summary -- optionally also saving a matplotlib bar chart. Run it after
-the CPU ETL script (02_etl_v3.py / 02_etl_v4.py) and its GPU counterpart
-(04_spark_rapids_etl.py / 04_spark_rapids_etl_v4.py) have both run.
+recent ones with ../spark-log-profiler, and prints a text summary with
+naive/true speedup, per-run stage tables, and key observations. Run it
+after the CPU ETL script (02_etl_v3.py / 02_etl_v4.py) and its GPU
+counterpart (04_spark_rapids_etl.py / 04_spark_rapids_etl_v4.py) have
+both run.
+
+In a Cloudera AI Workbench session (or any IPython-backed console/
+notebook), a matplotlib chart is also displayed inline automatically --
+no flag needed. In a plain terminal there's no display surface, so use
+--chart to save the same chart as a PNG instead.
 
 Usage:
   python3 05_compare_cpu_gpu.py                latest two runs, text summary
-  python3 05_compare_cpu_gpu.py --chart         also save a PNG bar chart
+                                                (+ inline chart, in a Workbench/notebook session)
+  python3 05_compare_cpu_gpu.py --chart         also save a PNG bar chart to disk
+  python3 05_compare_cpu_gpu.py --no-chart      suppress the automatic inline chart
   python3 05_compare_cpu_gpu.py --single        analyze only the single latest run
   python3 05_compare_cpu_gpu.py --list          list discovered event logs, newest first
   python3 05_compare_cpu_gpu.py --dir <path>    look in a different directory
@@ -198,9 +206,19 @@ def print_comparison_report(run_a, run_b, label_a, label_b, profiler):
         print(f"  {i}. {line}")
 
 
-def save_chart(run_a, run_b, label_a, label_b, out_path):
-    import matplotlib
-    matplotlib.use("Agg")
+def in_notebook():
+    """True when running under an IPython kernel/console -- a real Jupyter
+    notebook, or a CML Workbench session (which runs a plain .py file
+    through an embedded IPython console, not just genuine .ipynb files)."""
+    try:
+        return get_ipython() is not None
+    except NameError:
+        return False
+
+
+def build_chart_figure(run_a, run_b, label_a, label_b):
+    """Build (but don't save or show) the comparison figure. Caller decides
+    whether to display it inline (notebook/Workbench) or save it to disk."""
     import matplotlib.pyplot as plt
 
     ta, tb = run_a["timing"], run_b["timing"]
@@ -213,30 +231,51 @@ def save_chart(run_a, run_b, label_a, label_b, out_path):
         if ta["execution_ms"] and tb["execution_ms"] else None
     )
 
-    fig, axes = plt.subplots(1, 2, figsize=(10, 4))
+    labels = [label_a, label_b]
+    totals_s = [ta["total_ms"] / 1000, tb["total_ms"] / 1000]
+    startup_s = [(ta["startup_ms"] or 0) / 1000, (tb["startup_ms"] or 0) / 1000]
+    execution_s = [(ta["execution_ms"] or 0) / 1000, (tb["execution_ms"] or 0) / 1000]
 
-    axes[0].bar(
-        [label_a, label_b],
-        [ta["total_ms"] / 1000, tb["total_ms"] / 1000],
-        color=["tab:blue", "tab:green"],
-    )
+    fig, axes = plt.subplots(1, 3, figsize=(15, 4))
+
+    axes[0].bar(labels, totals_s, color=["tab:blue", "tab:green"])
     axes[0].set_ylabel("Total time (s)")
     axes[0].set_title("Total runtime")
+
+    axes[1].bar(labels, startup_s, label="startup", color="tab:gray")
+    axes[1].bar(labels, execution_s, bottom=startup_s, label="execution", color="tab:orange")
+    axes[1].set_ylabel("Time (s)")
+    axes[1].set_title("Startup vs execution")
+    axes[1].legend()
 
     speedup_pairs = [("naive", naive), ("true", true_speedup)]
     speedup_labels = [n for n, v in speedup_pairs if v is not None]
     speedups = [v for _, v in speedup_pairs if v is not None]
 
-    axes[1].bar(speedup_labels, speedups, color="tab:orange")
-    axes[1].set_ylabel("Speedup (x)")
-    axes[1].set_title(f"{label_a} / {label_b} speedup")
+    axes[2].bar(speedup_labels, speedups, color="tab:orange")
+    axes[2].set_ylabel("Speedup (x)")
+    axes[2].set_title(f"{label_a} / {label_b} speedup")
     for i, v in enumerate(speedups):
-        axes[1].text(i, v, f"{v:.2f}x", ha="center", va="bottom")
+        axes[2].text(i, v, f"{v:.2f}x", ha="center", va="bottom")
 
     fig.suptitle("CPU vs GPU comparison")
     fig.tight_layout()
+    return fig
+
+
+def save_chart(run_a, run_b, label_a, label_b, out_path):
+    import matplotlib
+    matplotlib.use("Agg")
+    fig = build_chart_figure(run_a, run_b, label_a, label_b)
     fig.savefig(out_path, dpi=150)
     print(f"\nChart saved to {out_path}")
+
+
+def show_chart_inline(run_a, run_b, label_a, label_b):
+    from IPython.display import display
+
+    fig = build_chart_figure(run_a, run_b, label_a, label_b)
+    display(fig)
 
 
 def main():
@@ -257,12 +296,17 @@ def main():
     ap.add_argument(
         "--chart",
         action="store_true",
-        help="also save a matplotlib PNG bar chart of the comparison",
+        help="also save a matplotlib PNG bar chart of the comparison to disk",
     )
     ap.add_argument(
         "--chart-out",
         default="cpu_vs_gpu_comparison.png",
         help="path to save the chart PNG (default: %(default)s)",
+    )
+    ap.add_argument(
+        "--no-chart",
+        action="store_true",
+        help="in a notebook/Workbench session, skip the automatic inline chart",
     )
     ap.add_argument(
         "--list",
@@ -310,6 +354,15 @@ def main():
     print(profiler.summarize_comparison(run_a, run_b, label_a, label_b))
     print()
     print_comparison_report(run_a, run_b, label_a, label_b, profiler)
+
+    if in_notebook() and not args.no_chart:
+        try:
+            show_chart_inline(run_a, run_b, label_a, label_b)
+        except ImportError:
+            print(
+                "\nmatplotlib not installed -- skipping inline chart. "
+                "Install with: pip install matplotlib"
+            )
 
     if args.chart:
         try:
