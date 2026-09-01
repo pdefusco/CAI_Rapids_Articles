@@ -10,15 +10,16 @@ counterpart (04_spark_rapids_etl.py / 04_spark_rapids_etl_v4.py) have
 both run.
 
 In a Cloudera AI Workbench session (or any IPython-backed console/
-notebook), a matplotlib chart is also displayed inline automatically --
-no flag needed. In a plain terminal there's no display surface, so use
---chart to save the same chart as a PNG instead.
+notebook), a styled HTML report (stat tiles, time breakdown bars,
+speedup bars, stage tables, key observations) is also displayed inline
+automatically -- no flag needed. In a plain terminal there's no display
+surface for that, so use --chart to save a plain matplotlib PNG instead.
 
 Usage:
   python3 05_compare_cpu_gpu.py                latest two runs, text summary
-                                                (+ inline chart, in a Workbench/notebook session)
+                                                (+ inline HTML report, in a Workbench/notebook session)
   python3 05_compare_cpu_gpu.py --chart         also save a PNG bar chart to disk
-  python3 05_compare_cpu_gpu.py --no-chart      suppress the automatic inline chart
+  python3 05_compare_cpu_gpu.py --no-chart      suppress the automatic inline HTML report
   python3 05_compare_cpu_gpu.py --single        analyze only the single latest run
   python3 05_compare_cpu_gpu.py --list          list discovered event logs, newest first
   python3 05_compare_cpu_gpu.py --dir <path>    look in a different directory
@@ -175,6 +176,177 @@ def derive_key_observations(run_a, run_b, label_a, label_b, profiler):
     return obs
 
 
+def _secs(ms):
+    return f"{(ms or 0) / 1000:.2f}s"
+
+
+def _html_breakdown_row(run, label, color, profiler):
+    t = run["timing"]
+    total_ms = t.get("total_ms") or 0
+    startup_ms = t.get("startup_ms") or 0
+    execution_ms = t.get("execution_ms") or 0
+    startup_pct = (100.0 * startup_ms / total_ms) if total_ms else 0
+    exec_pct = 100.0 - startup_pct if total_ms else 0
+
+    return f"""
+    <div style="margin-bottom:18px;">
+      <div style="font-weight:600; color:{color}; margin-bottom:6px;">{label}</div>
+      <div style="display:flex; width:100%; height:22px; border-radius:4px; overflow:hidden; background:#eee;">
+        <div style="width:{startup_pct:.2f}%; background:#c9c9c9;"></div>
+        <div style="width:{exec_pct:.2f}%; background:{color};"></div>
+      </div>
+      <div style="display:flex; gap:16px; margin-top:6px; font-size:12.5px; color:#555;">
+        <span>Startup &mdash; <b>{_secs(startup_ms)}</b> ({profiler.fmt_pct(startup_ms, total_ms)})</span>
+        <span>Execution &mdash; <b>{_secs(execution_ms)}</b> ({profiler.fmt_pct(execution_ms, total_ms)})</span>
+        <span style="margin-left:auto; color:#999;">{_secs(total_ms)} total</span>
+      </div>
+    </div>
+    """
+
+
+def _html_stage_table(stages, color, top_n=8):
+    rows = ""
+    for s in stages[:top_n]:
+        skew = s.get("skew")
+        skew_str = f"{skew}x" if skew else "n/a"
+        skew_color = "#d1720f" if skew and skew >= 5 else "#222"
+        rows += f"""
+        <tr>
+          <td style="padding:4px 8px; text-align:right;">{s['stage_id']}</td>
+          <td style="padding:4px 8px; text-align:right;">{_secs(s['duration_ms'])}</td>
+          <td style="padding:4px 8px; text-align:right;">{s['task_count']}</td>
+          <td style="padding:4px 8px; text-align:right; color:{skew_color}; font-weight:{'700' if skew and skew >= 5 else '400'};">{skew_str}</td>
+          <td style="padding:4px 8px; text-align:right;">{_fmt_bytes_local(s.get('shuffle_write_bytes'))}</td>
+        </tr>
+        """
+
+    return f"""
+    <table style="width:100%; border-collapse:collapse; font-size:13px;">
+      <thead>
+        <tr style="color:#888; font-size:11px; letter-spacing:0.4px;">
+          <th style="padding:4px 8px; text-align:right;">STAGE</th>
+          <th style="padding:4px 8px; text-align:right;">DUR</th>
+          <th style="padding:4px 8px; text-align:right;">TASKS</th>
+          <th style="padding:4px 8px; text-align:right;">SKEW</th>
+          <th style="padding:4px 8px; text-align:right;">SHUFFLE W</th>
+        </tr>
+      </thead>
+      <tbody>{rows}</tbody>
+    </table>
+    """
+
+
+def _fmt_bytes_local(n):
+    if not n:
+        return "n/a"
+    n = float(n)
+    for unit in ("B", "KB", "MB", "GB", "TB"):
+        if abs(n) < 1024:
+            return f"{n:.1f}{unit}"
+        n /= 1024
+    return f"{n:.1f}PB"
+
+
+def build_html_report(run_a, run_b, label_a, label_b, profiler):
+    ta, tb = run_a["timing"], run_b["timing"]
+    naive = (
+        ta["total_ms"] / tb["total_ms"]
+        if ta["total_ms"] and tb["total_ms"] else None
+    )
+    true_speedup = (
+        ta["execution_ms"] / tb["execution_ms"]
+        if ta["execution_ms"] and tb["execution_ms"] else None
+    )
+
+    share_a = ta["startup_ms"] / ta["total_ms"] if ta.get("total_ms") else 0
+    share_b = tb["startup_ms"] / tb["total_ms"] if tb.get("total_ms") else 0
+    hi_label, hi_run, hi_share = (
+        (label_a, run_a, share_a) if share_a >= share_b else (label_b, run_b, share_b)
+    )
+
+    color_a, color_b = "#d35400", "#2563eb"
+
+    naive_h = 40 if not true_speedup or naive is None else max(20, round(120 * naive / max(naive, true_speedup)))
+    true_h = 120 if not naive or true_speedup is None else max(20, round(120 * true_speedup / max(naive, true_speedup)))
+
+    observations = derive_key_observations(run_a, run_b, label_a, label_b, profiler)
+    obs_html = "".join(f"<li style='margin-bottom:8px;'>{o}</li>" for o in observations)
+
+    return f"""
+<div style="font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif; max-width:960px; color:#1a1a1a;">
+
+  <h2 style="margin:0 0 4px 0;">CPU vs GPU ETL Job Profile</h2>
+  <div style="color:#777; margin-bottom:20px; font-size:14px;">{label_a} vs {label_b} &middot; reconstructed from Spark event logs</div>
+
+  <div style="display:flex; gap:14px; margin-bottom:26px;">
+    <div style="flex:1; border:1px solid #e3e3e3; border-radius:10px; padding:16px;">
+      <div style="font-size:11px; color:#888; letter-spacing:0.5px;">NAIVE SPEEDUP</div>
+      <div style="font-size:26px; font-weight:700; margin:4px 0;">{f'{naive:.2f}x' if naive else 'n/a'}</div>
+      <div style="font-size:12px; color:#888;">{_secs(ta['total_ms'])} &rarr; {_secs(tb['total_ms'])}, reported totals</div>
+    </div>
+    <div style="flex:1; border:1px solid #e3e3e3; border-radius:10px; padding:16px;">
+      <div style="font-size:11px; color:#888; letter-spacing:0.5px;">TRUE SPEEDUP (STARTUP EXCLUDED)</div>
+      <div style="font-size:26px; font-weight:700; margin:4px 0; color:#1a7f37;">{f'{true_speedup:.2f}x' if true_speedup else 'n/a'}</div>
+      <div style="font-size:12px; color:#888;">{_secs(ta['execution_ms'])} &rarr; {_secs(tb['execution_ms'])}, execution only</div>
+    </div>
+    <div style="flex:1; border:1px solid #e3e3e3; border-radius:10px; padding:16px;">
+      <div style="font-size:11px; color:#888; letter-spacing:0.5px;">{hi_label.upper()} STARTUP SHARE OF TOTAL</div>
+      <div style="font-size:26px; font-weight:700; margin:4px 0; color:#2563eb;">~{hi_share * 100:.0f}%</div>
+      <div style="font-size:12px; color:#888;">&asymp;{_secs(hi_run['timing']['startup_ms'])} of {_secs(hi_run['timing']['total_ms'])} was init, not compute</div>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:10px;">Where the time went</h3>
+  <div style="border:1px solid #e3e3e3; border-radius:10px; padding:18px; margin-bottom:26px;">
+    {_html_breakdown_row(run_a, label_a, color_a, profiler)}
+    {_html_breakdown_row(run_b, label_b, color_b, profiler)}
+  </div>
+
+  <h3 style="margin-bottom:10px;">Naive vs true speedup</h3>
+  <div style="border:1px solid #e3e3e3; border-radius:10px; padding:24px; margin-bottom:26px; display:flex; justify-content:center; gap:70px; text-align:center;">
+    <div>
+      <div style="font-size:20px; font-weight:700;">{f'{naive:.2f}x' if naive else 'n/a'}</div>
+      <div style="width:56px; height:{naive_h}px; background:#9a9a9a; margin:10px auto 8px; border-radius:4px;"></div>
+      <div style="font-weight:600; font-size:13px;">Naive</div>
+      <div style="font-size:11.5px; color:#888;">reported totals, incl. startup</div>
+    </div>
+    <div>
+      <div style="font-size:20px; font-weight:700; color:#2563eb;">{f'{true_speedup:.2f}x' if true_speedup else 'n/a'}</div>
+      <div style="width:56px; height:{true_h}px; background:#2563eb; margin:10px auto 8px; border-radius:4px;"></div>
+      <div style="font-weight:600; font-size:13px;">True operation</div>
+      <div style="font-size:11.5px; color:#888;">execution only, startup excluded</div>
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:10px;">Heaviest stages</h3>
+  <div style="display:flex; gap:24px; margin-bottom:26px;">
+    <div style="flex:1;">
+      <div style="font-weight:600; color:{color_a}; margin-bottom:6px;">{label_a} &mdash; top stages</div>
+      {_html_stage_table(run_a["stages"], color_a)}
+    </div>
+    <div style="flex:1;">
+      <div style="font-weight:600; color:{color_b}; margin-bottom:6px;">{label_b} &mdash; top stages</div>
+      {_html_stage_table(run_b["stages"], color_b)}
+    </div>
+  </div>
+
+  <h3 style="margin-bottom:10px;">Key observations</h3>
+  <div style="border:1px solid #e3e3e3; border-radius:10px; padding:18px 18px 18px 34px;">
+    <ol style="margin:0; padding-left:0; font-size:13.5px; line-height:1.5;">
+      {obs_html}
+    </ol>
+  </div>
+
+</div>
+"""
+
+
+def show_html_report(run_a, run_b, label_a, label_b, profiler):
+    from IPython.display import HTML, display
+
+    display(HTML(build_html_report(run_a, run_b, label_a, label_b, profiler)))
+
+
 def print_comparison_report(run_a, run_b, label_a, label_b, profiler):
     ta, tb = run_a["timing"], run_b["timing"]
     naive = (
@@ -306,7 +478,7 @@ def main():
     ap.add_argument(
         "--no-chart",
         action="store_true",
-        help="in a notebook/Workbench session, skip the automatic inline chart",
+        help="in a notebook/Workbench session, skip the automatic inline HTML report",
     )
     ap.add_argument(
         "--list",
@@ -357,11 +529,10 @@ def main():
 
     if in_notebook() and not args.no_chart:
         try:
-            show_chart_inline(run_a, run_b, label_a, label_b)
+            show_html_report(run_a, run_b, label_a, label_b, profiler)
         except ImportError:
             print(
-                "\nmatplotlib not installed -- skipping inline chart. "
-                "Install with: pip install matplotlib"
+                "\nIPython.display not available -- skipping the visual report."
             )
 
     if args.chart:
