@@ -306,13 +306,17 @@ def build_html_report(run_a, run_b, label_a, label_b, profiler):
   <div style="border:1px solid #e3e3e3; border-radius:10px; padding:24px; margin-bottom:26px; display:flex; justify-content:center; gap:70px; text-align:center;">
     <div>
       <div style="font-size:20px; font-weight:700;">{f'{naive:.2f}x' if naive else 'n/a'}</div>
-      <div style="width:56px; height:{naive_h}px; background:#9a9a9a; margin:10px auto 8px; border-radius:4px;"></div>
+      <div style="height:130px; margin:10px 0 8px; display:flex; align-items:flex-end; justify-content:center;">
+        <div style="width:56px; height:{naive_h}px; background:#9a9a9a; border-radius:4px;"></div>
+      </div>
       <div style="font-weight:600; font-size:13px;">Naive</div>
       <div style="font-size:11.5px; color:#888;">reported totals, incl. startup</div>
     </div>
     <div>
       <div style="font-size:20px; font-weight:700; color:#2563eb;">{f'{true_speedup:.2f}x' if true_speedup else 'n/a'}</div>
-      <div style="width:56px; height:{true_h}px; background:#2563eb; margin:10px auto 8px; border-radius:4px;"></div>
+      <div style="height:130px; margin:10px 0 8px; display:flex; align-items:flex-end; justify-content:center;">
+        <div style="width:56px; height:{true_h}px; background:#2563eb; border-radius:4px;"></div>
+      </div>
       <div style="font-weight:600; font-size:13px;">True operation</div>
       <div style="font-size:11.5px; color:#888;">execution only, startup excluded</div>
     </div>
