@@ -27,10 +27,15 @@ import sys
 
 DEFAULT_EVENT_LOG_DIR = "/home/cdsw/spark-rapids-qualification-tool/spark-event-logs-dir"
 
-PROFILER_SCRIPT = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    "..", "spark-log-profiler", "profile.py"
-)
+try:
+    # __file__ isn't defined when this code runs in a notebook cell
+    # (as opposed to `python3 05_compare_cpu_gpu.py` from a terminal) --
+    # fall back to this project's known layout under /home/cdsw.
+    _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
+except NameError:
+    _SCRIPT_DIR = "/home/cdsw/spark-rapids-qualification-tool"
+
+PROFILER_SCRIPT = os.path.join(_SCRIPT_DIR, "..", "spark-log-profiler", "profile.py")
 
 # Prefixes Spark uses for event log files/directories: v2 rolling
 # (eventlog_v2_spark-<appid>), legacy single-file (local-<ts>,
@@ -58,6 +63,139 @@ def find_event_logs(event_log_dir):
     ]
     candidates.sort(key=os.path.getmtime, reverse=True)
     return candidates
+
+
+def render_time_breakdown(run, label, profiler, width=50):
+    t = run["timing"]
+    total_ms = t.get("total_ms")
+    if not total_ms:
+        return f"{label}: n/a"
+
+    startup_ms = t.get("startup_ms") or 0
+    execution_ms = t.get("execution_ms") or 0
+    startup_chars = min(width, round(width * startup_ms / total_ms))
+    exec_chars = width - startup_chars
+    bar = "." * startup_chars + "#" * exec_chars
+
+    lines = [f"{label}  ({profiler.fmt_ms(total_ms)} total)", f"  [{bar}]"]
+    lines.append(
+        f"  startup {profiler.fmt_ms(startup_ms)} "
+        f"({profiler.fmt_pct(startup_ms, total_ms)})   "
+        f"execution {profiler.fmt_ms(execution_ms)} "
+        f"({profiler.fmt_pct(execution_ms, total_ms)})"
+    )
+    return "\n".join(lines)
+
+
+def render_speedup_bars(naive, true_speedup, width=30):
+    pairs = [("naive", naive), ("true", true_speedup)]
+    present = [(name, v) for name, v in pairs if v is not None]
+    if not present:
+        return "  n/a"
+
+    max_v = max(v for _, v in present)
+    lines = []
+    for name, v in present:
+        bar_len = max(1, round((v / max_v) * width)) if max_v else 0
+        bar = "#" * bar_len + "." * (width - bar_len)
+        lines.append(f"  {name:<6} [{bar}] {v:.2f}x")
+    return "\n".join(lines)
+
+
+def render_stage_table(stages, profiler, top_n=8):
+    header = f"  {'stage':>6} {'duration':>10} {'tasks':>6} {'skew':>7} {'shuffle_w':>10}"
+    rule = "  " + "-" * (len(header) - 2)
+    lines = [header, rule]
+    for s in stages[:top_n]:
+        skew = f"{s['skew']}x" if s.get("skew") else "n/a"
+        lines.append(
+            f"  {s['stage_id']:>6} {profiler.fmt_ms(s['duration_ms']):>10} "
+            f"{s['task_count']:>6} {skew:>7} "
+            f"{profiler.fmt_bytes(s['shuffle_write_bytes']):>10}"
+        )
+    return "\n".join(lines)
+
+
+def derive_key_observations(run_a, run_b, label_a, label_b, profiler):
+    obs = []
+    ta, tb = run_a["timing"], run_b["timing"]
+
+    share_a = ta["startup_ms"] / ta["total_ms"] if ta.get("total_ms") else None
+    share_b = tb["startup_ms"] / tb["total_ms"] if tb.get("total_ms") else None
+    if share_a is not None and share_b is not None and abs(share_a - share_b) > 0.15:
+        lower_label = label_a if share_a < share_b else label_b
+        obs.append(
+            f"Startup share differs a lot between runs ({label_a}="
+            f"{profiler.fmt_pct(ta['startup_ms'], ta['total_ms'])}, {label_b}="
+            f"{profiler.fmt_pct(tb['startup_ms'], tb['total_ms'])}). {lower_label} "
+            "may have run against an already-warm session (e.g. other jobs run "
+            "earlier in the same notebook/session) -- trust the true speedup "
+            "(execution-only) over the naive one here."
+        )
+
+    for label, run in ((label_a, run_a), (label_b, run_b)):
+        worst = max(
+            (s for s in run["stages"] if s.get("skew")),
+            key=lambda s: s["skew"],
+            default=None,
+        )
+        if worst and worst["skew"] >= 5:
+            obs.append(
+                f"{label}: stage {worst['stage_id']} shows {worst['skew']}x task skew "
+                "-- a handful of partitions are doing disproportionate work; check "
+                "the join/repartition key feeding that stage."
+            )
+
+    for label, run in ((label_a, run_a), (label_b, run_b)):
+        totals = run["totals"]
+        if totals.get("total_mem_spill_bytes") or totals.get("total_disk_spill_bytes"):
+            obs.append(
+                f"{label}: spill detected (mem="
+                f"{profiler.fmt_bytes(totals['total_mem_spill_bytes'])}, disk="
+                f"{profiler.fmt_bytes(totals['total_disk_spill_bytes'])}) -- "
+                "executor memory may be undersized for this data volume."
+            )
+        if totals.get("num_failed_tasks"):
+            obs.append(
+                f"{label}: {totals['num_failed_tasks']} failed task(s) -- check "
+                "for retried/OOM'd tasks in that run's executor logs."
+            )
+
+    if not obs:
+        obs.append("No skew, spill, startup-share, or failed-task issues detected on either run.")
+
+    return obs
+
+
+def print_comparison_report(run_a, run_b, label_a, label_b, profiler):
+    ta, tb = run_a["timing"], run_b["timing"]
+    naive = (
+        ta["total_ms"] / tb["total_ms"]
+        if ta["total_ms"] and tb["total_ms"] else None
+    )
+    true_speedup = (
+        ta["execution_ms"] / tb["execution_ms"]
+        if ta["execution_ms"] and tb["execution_ms"] else None
+    )
+
+    print(f"=== CPU vs GPU comparison: {label_a} vs {label_b} ===\n")
+
+    print("Where the time went")
+    print(render_time_breakdown(run_a, label_a, profiler))
+    print()
+    print(render_time_breakdown(run_b, label_b, profiler))
+
+    print("\nNaive vs true speedup")
+    print(render_speedup_bars(naive, true_speedup))
+
+    print(f"\n{label_a} -- top stages by duration")
+    print(render_stage_table(run_a["stages"], profiler))
+    print(f"\n{label_b} -- top stages by duration")
+    print(render_stage_table(run_b["stages"], profiler))
+
+    print("\nKey observations")
+    for i, line in enumerate(derive_key_observations(run_a, run_b, label_a, label_b, profiler), 1):
+        print(f"  {i}. {line}")
 
 
 def save_chart(run_a, run_b, label_a, label_b, out_path):
@@ -131,7 +269,11 @@ def main():
         action="store_true",
         help="list discovered event logs (newest first) and exit",
     )
-    args = ap.parse_args()
+    # parse_known_args instead of parse_args: a Jupyter/notebook kernel
+    # populates sys.argv with its own launcher args (e.g. -f
+    # <connection-file>), which parse_args would reject outright. Ignore
+    # anything we don't recognize instead of failing on it.
+    args, _unknown = ap.parse_known_args()
 
     logs = find_event_logs(args.dir)
     if not logs:
@@ -166,6 +308,8 @@ def main():
     print()
     print(profiler.summarize_run(run_b, label=label_b))
     print(profiler.summarize_comparison(run_a, run_b, label_a, label_b))
+    print()
+    print_comparison_report(run_a, run_b, label_a, label_b, profiler)
 
     if args.chart:
         try:
