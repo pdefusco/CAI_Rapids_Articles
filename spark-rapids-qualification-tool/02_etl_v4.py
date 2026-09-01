@@ -34,7 +34,7 @@
 #  BUSINESS ADVANTAGE OR UNAVAILABILITY, OR LOSS OR CORRUPTION OF
 #  DATA.
 #
-# #  Author(s): Paul de Fusco
+# #  Author(s): Brandon Antone
 #***************************************************************************/
 
 #****************************************************************************
