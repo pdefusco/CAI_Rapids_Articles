@@ -167,7 +167,7 @@ class BankingETLv3:
 
 
         transactions = spark.table(
-            f"{self.database}.TRX"
+            f"{self.database}.TRS_v10"
         )
 
 
@@ -691,12 +691,13 @@ def main():
 
 
     CONNECTION_NAME = (
-        "pdf0714-aw-dl"
+      "se-aws-edl"
+
     )
 
 
     STORAGE = (
-        "s3a://pdf0714-buk-d7392db3/data"
+        "s3a://goes-se-sandbox/data"
     )
 
 

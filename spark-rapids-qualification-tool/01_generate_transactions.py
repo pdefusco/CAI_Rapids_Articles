@@ -69,6 +69,8 @@ class TransactionFactGenerator:
         from pyspark import SparkContext
         SparkContext.setSystemProperty('spark.executor.cores', '5')
         SparkContext.setSystemProperty('spark.executor.memory', '20g')
+        SparkContext.setSystemProperty('spark.driver.cores', '5')
+        SparkContext.setSystemProperty('spark.driver.memory', '20g')
         
         return spark
 
@@ -78,7 +80,7 @@ class TransactionFactGenerator:
     def generateTransactions(
             self,
             spark,
-            rows=2500000):
+            rows=25000000):
 
         customers = 20000000
         accounts = 30000000
@@ -481,7 +483,7 @@ class TransactionFactGenerator:
             "overwrite"
         ).saveAsTable(
 
-            f"{self.database}.TRS_v7"
+            f"{self.database}.TRS_v13"
 
         )
 
@@ -506,7 +508,8 @@ def main():
 
     DATABASE = f"DEMO_{USERNAME}"
 
-    CONNECTION_NAME = "pdf0714-aw-dl"
+    CONNECTION_NAME = "se-aws-edl"
+
 
 
     generator = TransactionFactGenerator(

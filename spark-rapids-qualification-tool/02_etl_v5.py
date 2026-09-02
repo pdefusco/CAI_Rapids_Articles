@@ -168,7 +168,7 @@ class BankingETLv5:
         ########################################################
 
         transactions = spark.table(
-            f"{self.database}.TRX"
+            f"{self.database}.TRS_v10"
         )
 
         customers = spark.table(
@@ -1259,7 +1259,7 @@ def main():
     )
 
     STORAGE = (
-        "s3a://pdf0714-buk-d7392db/data"
+        "s3a://goes-se-sandbox/data"
     )
 
     job = BankingETLv5(

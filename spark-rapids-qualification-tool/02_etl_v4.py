@@ -209,7 +209,7 @@ class BankingETLv4:
 
 
         transactions = spark.table(
-            f"{self.database}.TRX"
+            f"{self.database}.TRS_v10"
         )
 
 
@@ -911,7 +911,7 @@ def main():
 
 
     STORAGE = (
-        "s3a://pdf0714-buk-d7392db3/data"
+        "s3a://goes-se-sandbox/data"
     )
 
 
