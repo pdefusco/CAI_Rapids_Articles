@@ -57,10 +57,10 @@ DATABASE = "DEMO_pauldefusco"
 # joins, shuffles, aggregations, and downstream tasks experience
 # greater partition imbalance.
 TRANSACTION_TABLE = f"{DATABASE}.TRS_v14"
-CUSTOMER_TABLE = f"{DATABASE}.CUSTOMERS_v2"
-ACCOUNT_TABLE = f"{DATABASE}.ACCOUNTS_v2"
-MERCHANT_TABLE = f"{DATABASE}.MERCHANTS_v2"
-BRANCH_TABLE = f"{DATABASE}.BRANCHES_v2"
+CUSTOMER_TABLE = f"{DATABASE}.CUSTOMERS_skewed"
+ACCOUNT_TABLE = f"{DATABASE}.ACCOUNTS_skewed"
+MERCHANT_TABLE = f"{DATABASE}.MERCHANTS_skewed"
+BRANCH_TABLE = f"{DATABASE}.BRANCHES_skewed"
 
 # Calendar remains the original non-skewed table.
 CALENDAR_TABLE = f"{DATABASE}.CALENDAR"
