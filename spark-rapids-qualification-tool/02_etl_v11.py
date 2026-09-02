@@ -59,7 +59,7 @@
 #     - final multidimensional aggregation and global sort
 #
 #   Source tables are intentionally unchanged from v10:
-#       TRS_v14, CUSTOMERS_v2, ACCOUNTS_v2, MERCHANTS_v2,
+#       TRS_v14, CUSTOMERS_v2, ACCOUNTS_skewed, MERCHANTS_v2,
 #       BRANCHES_v2, CALENDAR
 #****************************************************************************/
 
@@ -77,10 +77,10 @@ from pyspark.sql import functions as F
 DATABASE = "DEMO_pauldefusco"
 
 TRANSACTION_TABLE = f"{DATABASE}.TRS_v14"
-CUSTOMER_TABLE = f"{DATABASE}.CUSTOMERS_v2"
-ACCOUNT_TABLE = f"{DATABASE}.ACCOUNTS_v2"
-MERCHANT_TABLE = f"{DATABASE}.MERCHANTS_v2"
-BRANCH_TABLE = f"{DATABASE}.BRANCHES_v2"
+CUSTOMER_TABLE = f"{DATABASE}.CUSTOMERS_skewed"
+ACCOUNT_TABLE = f"{DATABASE}.ACCOUNTS_skewed"
+MERCHANT_TABLE = f"{DATABASE}.MERCHANTS_skewed"
+BRANCH_TABLE = f"{DATABASE}.BRANCHES_skewed"
 CALENDAR_TABLE = f"{DATABASE}.CALENDAR"
 
 OUTPUT_TABLE = f"{DATABASE}.ETL_V11_RESULT"
