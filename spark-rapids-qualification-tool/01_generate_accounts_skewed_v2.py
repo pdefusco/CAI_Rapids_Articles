@@ -31,7 +31,7 @@ class AccountDimension:
         return spark
 
     def generateAccounts(self, spark):
-        customers = spark.table(f"{self.database}.CUSTOMERS_v2")
+        customers = spark.table(f"{self.database}.CUSTOMERS_skewed")
 
         base_accounts = customers.select("customer_id").withColumn(
             "account_sequence", F.lit(1)
@@ -78,7 +78,7 @@ class AccountDimension:
         return accounts
 
     def saveTable(self, df):
-        df.write.mode("overwrite").saveAsTable(f"{self.database}.ACCOUNTS_v2")
+        df.write.mode("overwrite").saveAsTable(f"{self.database}.ACCOUNTS_skewed")
         print(f"Accounts table created; rows: {df.count():,}")
         df.show(10, False)
 

@@ -107,7 +107,7 @@ class MerchantDimension:
         return merchants
 
     def saveTable(self, df):
-        df.write.mode("overwrite").saveAsTable(f"{self.database}.MERCHANTS_v2")
+        df.write.mode("overwrite").saveAsTable(f"{self.database}.MERCHANTS_skewed")
         print(f"Merchant table created; rows: {df.count():,}")
         df.show(10, False)
 

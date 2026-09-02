@@ -96,7 +96,7 @@ class CustomerDimension:
         return customers
 
     def saveTable(self, df):
-        df.write.mode("overwrite").saveAsTable(f"{self.database}.CUSTOMERS_v2")
+        df.write.mode("overwrite").saveAsTable(f"{self.database}.CUSTOMERS_skewed")
         print(f"Customer table created; rows: {df.count():,}")
         df.show(10, False)
 

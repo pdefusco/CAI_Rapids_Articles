@@ -87,7 +87,7 @@ class BranchDimension:
         return branches
 
     def saveTable(self, df):
-        df.write.mode("overwrite").saveAsTable(f"{self.database}.BRANCHES_v2")
+        df.write.mode("overwrite").saveAsTable(f"{self.database}.BRANCHES_skewed")
         print(f"Branches table created; rows: {df.count():,}")
         df.show(10, False)
 
