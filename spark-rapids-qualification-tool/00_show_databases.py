@@ -5,7 +5,8 @@ import cml.data_v1 as cmldata
 #SparkContext.setSystemProperty('spark.executor.cores', '4')
 #SparkContext.setSystemProperty('spark.executor.memory', '8g')
 
-CONNECTION_NAME = "pdf0714-aw-dl"
+CONNECTION_NAME = "se-aws-edl"
+
 conn = cmldata.get_connection(CONNECTION_NAME)
 spark = conn.get_spark_session()
 

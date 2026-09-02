@@ -237,7 +237,8 @@ def main():
 
     DATABASE = f"DEMO_{USERNAME}"
 
-    CONNECTION_NAME = "pdf0714-aw-dl"
+    CONNECTION_NAME = "se-aws-edl"
+
 
     generator = AccountDimension(
 
